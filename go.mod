@@ -6,7 +6,6 @@ require (
 	github.com/PaulSonOfLars/gotgbot/v2 v2.0.0-rc.29
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gofiber/fiber/v2 v2.52.5
-	github.com/golang/protobuf v1.5.3
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/qiniu/qmgo v1.1.8
@@ -15,6 +14,7 @@ require (
 	github.com/tealeg/xlsx v1.0.5
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.66.2
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -63,7 +63,6 @@ require (
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
