@@ -2,10 +2,15 @@ package ws_server
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/PaulSonOfLars/gotgbot/v2"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/v587-zyf/gc/gcnet/ws_session"
 	"github.com/v587-zyf/gc/log"
+	"github.com/v587-zyf/gc/telegram/go_tg_bot"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 )
 
@@ -45,12 +50,17 @@ func (s *WsServer) Init(ctx context.Context, option ...any) (err error) {
 }
 
 func (s *WsServer) Start() {
-	http.HandleFunc("/ws", s.wsHandle)
+	r := mux.NewRouter()
+
+	r.HandleFunc("/api/test", s.test).Methods("GET")
+	r.HandleFunc("/api/webHook", s.webHook).Methods("POST")
+	r.HandleFunc("/ws", s.wsHandle).Methods("GET")
+
 	var err error
-	if s.options.dev {
-		err = http.ListenAndServe(s.options.addr, nil)
+	if s.options.https {
+		err = http.ListenAndServeTLS(s.options.addr, s.options.pem, s.options.key, r)
 	} else {
-		err = http.ListenAndServeTLS(s.options.addr, s.options.pem, s.options.key, nil)
+		err = http.ListenAndServe(s.options.addr, r)
 	}
 	if err != nil {
 		panic(err)
@@ -66,6 +76,7 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+
 	wsConn, err := s.upGrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error("webSocket upgrade err:", zap.Error(err))
@@ -74,6 +85,32 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 	ss := ws_session.NewSession(context.Background(), wsConn)
 	ss.Hooks().OnMethod(s.options.method)
 	ss.Start()
+}
+
+func (s *WsServer) webHook(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusBadRequest)
+		return
+	}
+
+	var update gotgbot.Update
+	if err = json.Unmarshal(body, &update); err != nil {
+		http.Error(w, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err = go_tg_bot.ProcessUpdate(&update); err != nil {
+		log.Error("tg bot process update err:", zap.Error(err))
+		http.Error(w, "Error process update", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *WsServer) test(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *WsServer) Stop() {

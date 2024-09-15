@@ -9,7 +9,7 @@ type WsOption struct {
 	pem  string
 	key  string
 
-	dev bool
+	https bool
 
 	method iface.IWsSessionMethod
 }
@@ -46,8 +46,8 @@ func WithMethod(m iface.IWsSessionMethod) Option {
 	}
 }
 
-func WithDev(dev bool) Option {
+func WithHttps(https bool) Option {
 	return func(opts *WsOption) {
-		opts.dev = dev
+		opts.https = https
 	}
 }
