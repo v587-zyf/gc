@@ -110,13 +110,13 @@ func ReadXlsxSheet(sheet *xlsx.Sheet, obj interface{}, startRow int, startCol in
 	columnCount := 0
 	sizeAll := 0
 	var result = make([]interface{}, 0)
-	emptyRowCount := 0 // 空行
+	emptyRowCount := 0
 	emptRow := 0
 	for i, row := range sheet.Rows {
-		if i < startRow+2 {
+		if i < startRow+4 {
 			continue
-		} else if row == nil || len(row.Cells) == 0 {
-			if emptyRowCount >= 5 { // 空行判定
+		} else if row == nil || len(row.Cells) == 1 {
+			if emptyRowCount >= 4 {
 				break
 			}
 			emptRow = i
@@ -145,7 +145,7 @@ func ReadXlsxSheet(sheet *xlsx.Sheet, obj interface{}, startRow int, startCol in
 				return nil, fmt.Errorf("get column %s error for sheet %s,err:%v,cell:%v", fieldInfo.ColName, sheet.Name, err, cell)
 			}
 			cellString = strings.TrimSpace(cellString)
-			if j == startCol-1 && i >= startRow && (cell == nil || len(cellString) == 0) {
+			if j == startCol && i >= startRow && (cell == nil || len(cellString) == 0) {
 				goto exit //finish when meet first empty row (the first column of this row is empty)
 			}
 			if j > maxColumnIndex {
@@ -214,6 +214,9 @@ func ReadXlsxSheet(sheet *xlsx.Sheet, obj interface{}, startRow int, startCol in
 				s1 := reLineBreak.ReplaceAllString(cellString, "")
 				s1 = changeLangStr(s1)
 				fieldV.SetString(strings.Replace(s1, `"`, `\"`, -1))
+			default:
+				columnCount--
+				continue
 			}
 
 		}
