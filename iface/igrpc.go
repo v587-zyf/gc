@@ -21,9 +21,9 @@ type IGrpcStream interface {
 
 type IGrpcMsg interface {
 	Init(ctx context.Context, option ...any) (err error)
-	//SendToMsg(msg *server.MessageData)
-	Send2User(userID uint64, msgID int32, msg IProtoMessage)
-	SendErr2User(userID uint64, err error)
+	SendToMsg(msg IProtoMessage)
 
-	Broadcast(msgID int32, msg IProtoMessage)
+	//Send2User(userID uint64, msgID int32, msg IProtoMessage)
+	//SendErr2User(userID uint64, err error)
+	//Broadcast(msgID int32, msg IProtoMessage)
 }

@@ -2,9 +2,9 @@ package go_tg_bot
 
 import (
 	"context"
-	"doggy/core/log"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
+	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"time"
 )
