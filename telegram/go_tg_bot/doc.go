@@ -32,3 +32,11 @@ func AddHandle(handler ext.Handler) {
 func Start() {
 	defTgBot.Start()
 }
+
+func StartWebHook() {
+	defTgBot.StartWebHook()
+}
+
+func ProcessUpdate(update *gotgbot.Update) error {
+	return defTgBot.ProcessUpdate(update)
+}
