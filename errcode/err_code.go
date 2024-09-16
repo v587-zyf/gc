@@ -23,7 +23,15 @@ var (
 	ERR_EVENT_LISTENER_EMPTY    = CreateErrCode(33, NewCodeLang("事件监听器为空", enums.LANG_CN), NewCodeLang("Event listener is empty", enums.LANG_EN))
 	ERR_EVENT_LISTENER_NOT_FIND = CreateErrCode(34, NewCodeLang("事件监听器未找到", enums.LANG_CN), NewCodeLang("Event listener not found", enums.LANG_EN))
 
-	ERR_MQ_CONNECT_FAIL = CreateErrCode(41, NewCodeLang("mq连接失败", enums.LANG_CN), NewCodeLang("MQ connection failed", enums.LANG_EN))
+	ERR_MQ_REPLY_HEAD_LEN      = CreateErrCode(51, NewCodeLang("mq回复头长度错误", enums.LANG_CN), NewCodeLang("mq reply header length error", enums.LANG_EN))
+	ERR_MQ_BUFF_WRITE          = CreateErrCode(52, NewCodeLang("mq写入缓冲区错误", enums.LANG_CN), NewCodeLang("mq write buffer error", enums.LANG_EN))
+	ERR_MQ_REPLY_EMPTY         = CreateErrCode(53, NewCodeLang("mq回复数据为空", enums.LANG_CN), NewCodeLang("mq reply data is empty", enums.LANG_EN))
+	ERR_MQ_REPLY_PB            = CreateErrCode(54, NewCodeLang("mq回复数据pb错误", enums.LANG_CN), NewCodeLang("mq reply data pb error", enums.LANG_EN))
+	ERR_MQ_RECV_DATA_UNMARSHAL = CreateErrCode(55, NewCodeLang("mq接收数据解析错误", enums.LANG_CN), NewCodeLang("mq receive data unmarshal error", enums.LANG_EN))
+	ERR_MQ_MSG_ID_NOT_REGISTER = CreateErrCode(56, NewCodeLang("mq消息未注册", enums.LANG_CN), NewCodeLang("mq message not registered", enums.LANG_EN))
+	ERR_MQ_CONNECT_FAIL        = CreateErrCode(57, NewCodeLang("mq连接失败", enums.LANG_CN), NewCodeLang("mq connect failed", enums.LANG_EN))
+	ERR_MQ_REQ_TIMEOUT         = CreateErrCode(58, NewCodeLang("mq请求超时", enums.LANG_CN), NewCodeLang("mq request timeout", enums.LANG_EN))
+	ERR_MQ_SERVER_NOT_FOUND    = CreateErrCode(59, NewCodeLang("mq服务器未找到", enums.LANG_CN), NewCodeLang("mq server not found", enums.LANG_EN))
 
 	ERR_USER_DATA_NOT_FOUND  = CreateErrCode(101, NewCodeLang("用户信息未找到", enums.LANG_CN), NewCodeLang("User information not found", enums.LANG_EN))
 	ERR_USER_DATA_INVALID    = CreateErrCode(102, NewCodeLang("用户信息错误", enums.LANG_CN), NewCodeLang("The user information is incorrect", enums.LANG_EN))
