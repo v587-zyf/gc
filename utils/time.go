@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var Time1970 = time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local)
+
 func GetNowUTC() time.Time {
 	loc, _ := time.LoadLocation("UTC")
 	return time.Now().In(loc)
