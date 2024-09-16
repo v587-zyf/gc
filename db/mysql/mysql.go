@@ -2,16 +2,11 @@ package mysql
 
 import (
 	"context"
+	"github.com/v587-zyf/gc/enums"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"time"
-)
-
-const (
-	MAX_CONN      = 5
-	MAX_IDLE_CONN = 2
-	CONN_LIFETIME = 10
 )
 
 type Mysql struct {
@@ -58,21 +53,21 @@ func (m *Mysql) Init(ctx context.Context, opts ...any) (err error) {
 		return err
 	}
 	{
-		maxConn := MAX_CONN
+		maxConn := enums.DB_MAX_CONN
 		if m.options.max_conn != 0 {
 			maxConn = m.options.max_conn
 		}
 		sqlDB.SetMaxOpenConns(maxConn)
 	}
 	{
-		maxIdleConn := MAX_IDLE_CONN
+		maxIdleConn := enums.DB_MAX_IDLE_CONN
 		if m.options.max_idle_conn != 0 {
 			maxIdleConn = m.options.max_idle_conn
 		}
 		sqlDB.SetMaxIdleConns(maxIdleConn)
 	}
 	{
-		connLifetime := CONN_LIFETIME
+		connLifetime := enums.DB_CONN_LIFETIME
 		if m.options.conn_max_lifetime != 0 {
 			connLifetime = m.options.conn_max_lifetime
 		}
