@@ -47,7 +47,6 @@ func TgGetCheckData(urlQuery url.Values) string {
 		sortedQuery.WriteString(p.Value)
 	}
 
-	//fmt.Println("Sorted Query String:", sortedQuery.String())
 	return sortedQuery.String()
 }
 
@@ -55,12 +54,6 @@ func TgGetHmacSha256(key, data []byte) []byte {
 	h := hmac.New(sha256.New, key)
 	h.Write(data)
 	hash := h.Sum(nil)
-
-	//HmacUtils (HmacAlgorithms.HMAC SHA 256, botTokenData).hmac (botToken)
-
-	//fmt.Println("HMAC-SHA256 Hash:", hex.EncodeToString(hash))
-	//fmt.Println(base64.StdEncoding.EncodeToString(hash))
-	//return hex.EncodeToString(hash)
 	return hash
 }
 
