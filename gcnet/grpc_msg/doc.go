@@ -24,6 +24,8 @@ func GetMsg() <-chan iface.IProtoMessage {
 	return defGrpcMsg.GetMsg()
 }
 
+func Get() *GrpcMsg { return defGrpcMsg }
+
 //func Send2User(userID uint64, msgID int32, msg iface.IProtoMessage) {
 //	defGrpcMsg.Send2User(userID, msgID, msg)
 //}
