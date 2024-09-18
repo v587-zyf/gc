@@ -1,0 +1,25 @@
+From 7a6b10c1371856ee8f68910fbd2594c181a3d353 Mon Sep 17 00:00:00 2001
+From: Cyber <1322816443@qq.com>
+Date: Wed, 18 Sep 2024 12:01:47 +0800
+Subject: [PATCH] add IRedisInfo
+
+---
+ iface/iredis.go | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/iface/iredis.go b/iface/iredis.go
+index c3bdda7..eeee6ea 100644
+--- a/iface/iredis.go
++++ b/iface/iredis.go
+@@ -7,3 +7,8 @@ type IRedis interface {
+ 	Get() any
+ 	GetCtx() context.Context
+ }
++
++type IRedisInfo interface {
++	ToJson() ([]byte, error)
++	LoadJson(json []byte) error
++}
+-- 
+2.43.0.windows.1
+
