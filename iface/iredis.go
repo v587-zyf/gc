@@ -7,3 +7,8 @@ type IRedis interface {
 	Get() any
 	GetCtx() context.Context
 }
+
+type IRedisInfo interface {
+	ToJson() ([]byte, error)
+	LoadJson(json []byte) error
+}
