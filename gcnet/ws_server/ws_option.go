@@ -2,6 +2,7 @@ package ws_server
 
 import (
 	"github.com/v587-zyf/gc/iface"
+	"net/http"
 )
 
 type WsOption struct {
@@ -11,6 +12,7 @@ type WsOption struct {
 
 	https bool
 
+	wsFunc func(http.ResponseWriter, *http.Request)
 	method iface.IWsSessionMethod
 }
 
@@ -40,14 +42,20 @@ func WithKey(key string) Option {
 	}
 }
 
-func WithMethod(m iface.IWsSessionMethod) Option {
-	return func(opts *WsOption) {
-		opts.method = m
-	}
-}
-
 func WithHttps(https bool) Option {
 	return func(opts *WsOption) {
 		opts.https = https
+	}
+}
+
+func WithWsFunc(wsFunc func(http.ResponseWriter, *http.Request)) Option {
+	return func(opts *WsOption) {
+		opts.wsFunc = wsFunc
+	}
+}
+
+func WithMethod(m iface.IWsSessionMethod) Option {
+	return func(opts *WsOption) {
+		opts.method = m
 	}
 }

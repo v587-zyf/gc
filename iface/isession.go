@@ -37,6 +37,7 @@ type IWsSession interface {
 	GetConn() *websocket.Conn
 	GetCtx() context.Context
 
+	SendMsg(fn func(args ...any) ([]byte, error), args ...any) error
 	Send(msgID uint16, tag uint32, userID uint64, msg IProtoMessage) error
 	Send2User(msgID uint16, msg IProtoMessage) error
 

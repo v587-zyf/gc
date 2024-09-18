@@ -54,7 +54,11 @@ func (s *WsServer) Start() {
 
 	r.HandleFunc("/api/test", s.test).Methods("GET")
 	r.HandleFunc("/api/webHook", s.webHook).Methods("POST")
-	r.HandleFunc("/ws", s.wsHandle).Methods("GET")
+	if s.options.wsFunc != nil {
+		r.HandleFunc("/ws", s.options.wsFunc).Methods("GET")
+	} else {
+		r.HandleFunc("/ws", s.wsHandle).Methods("GET")
+	}
 
 	var err error
 	if s.options.https {
