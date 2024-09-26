@@ -40,9 +40,6 @@ type IWsSession interface {
 	SendMsg(fn func(args ...any) ([]byte, error), args ...any) error
 	Send(msgID uint16, tag uint32, userID uint64, msg IProtoMessage) error
 	Send2User(msgID uint16, msg IProtoMessage) error
-
-	GetReconnectTimes() int
-	AddReconnectTimes()
 }
 
 type ITcpSessionMgr interface {
@@ -57,7 +54,19 @@ type ITcpSessionMgr interface {
 	Range(fn func(uint64, ITcpSession))
 }
 
-type ITpcSessionMethod interface {
+type IWsSessionMgr interface {
+	Length() int
+	GetOne(UID uint64) IWsSession
+	IsOnline(UID uint64) bool
+
+	Add(ss IWsSession)
+	Disconnect(SID uint64)
+
+	Once(UID uint64, fn func(mgr IWsSession))
+	Range(fn func(uint64, IWsSession))
+}
+
+type ITcpSessionMethod interface {
 	Start(ss ITcpSession)
 	Recv(conn ITcpSession, data any)
 	Stop(ss ITcpSession)

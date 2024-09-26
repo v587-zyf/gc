@@ -10,92 +10,131 @@ import (
 )
 
 type ModuleMgr struct {
-	modules map[string]iface.IModule
-	sync.RWMutex
+	modules sync.Map // name:iface.IModule
 }
 
 func (mm *ModuleMgr) Add(m iface.IModule) {
-	mm.Lock()
-	defer mm.Unlock()
-
-	if _, ok := mm.modules[m.Name()]; ok {
+	if _, ok := mm.modules.Load(m.Name()); ok {
 		log.Warn("module already exists", zap.String("name", m.Name()))
 		return
 	}
 
-	mm.modules[m.Name()] = m
+	mm.modules.Store(m.Name(), m)
 }
 
 func (mm *ModuleMgr) Get(name string) iface.IModule {
-	mm.RLock()
-	defer mm.RUnlock()
-
-	module, ok := mm.modules[name]
-	if !ok {
-		log.Warn("module not exists", zap.String("name", name))
-		return nil
+	if module, ok := mm.modules.Load(name); ok {
+		return module.(iface.IModule)
 	}
 
-	return module
+	log.Warn("module not exists", zap.String("name", name))
+	return nil
 }
 
 func (mm *ModuleMgr) Del(name string) {
-	mm.Lock()
-	defer mm.Unlock()
+	if _, ok := mm.modules.Load(name); ok {
+		mm.modules.Delete(name)
+		log.Info("module deleted", zap.String("name", name))
+	} else {
+		log.Warn("module not found for deletion", zap.String("name", name))
+	}
+}
 
-	delete(mm.modules, name)
+func (mm *ModuleMgr) Length() int {
+	length := 0
+	mm.modules.Range(func(key, value any) bool {
+		length++
+		return true
+	})
+
+	return length
 }
 
 func (mm *ModuleMgr) Init(ctx context.Context, opts ...iface.Option) (err error) {
-	mm.RLock()
-	defer mm.RUnlock()
-
-	if len(mm.modules) <= 0 {
+	moduleLen := mm.Length()
+	if moduleLen <= 0 {
 		return fmt.Errorf("no module")
 	}
 
-	for _, module := range mm.modules {
-		err = module.Init(ctx, opts...)
-		if err != nil {
-			return
-		}
-	}
+	var wg sync.WaitGroup
+	wg.Add(moduleLen)
+
+	mm.modules.Range(func(key, value any) bool {
+		go func(module iface.IModule) {
+			defer wg.Done()
+			err := module.Init(ctx, opts...)
+			if err != nil {
+				log.Error("module init failed", zap.String("name", module.Name()), zap.Error(err))
+			}
+		}(value.(iface.IModule))
+		return true
+	})
+	wg.Wait()
 
 	return nil
 }
 
 func (mm *ModuleMgr) Start() (err error) {
-	mm.RLock()
-	defer mm.RUnlock()
-
-	if len(mm.modules) <= 0 {
+	moduleLen := mm.Length()
+	if moduleLen <= 0 {
 		return fmt.Errorf("no module")
 	}
 
-	for _, module := range mm.modules {
-		err = module.Start()
-		if err != nil {
-			return
-		}
-	}
+	var wg sync.WaitGroup
+	wg.Add(moduleLen)
+
+	mm.modules.Range(func(key, value any) bool {
+		go func(module iface.IModule) {
+			defer wg.Done()
+			err := module.Start()
+			if err != nil {
+				log.Error("module start failed", zap.String("name", module.Name()), zap.Error(err))
+			}
+		}(value.(iface.IModule))
+		return true
+	})
+
+	wg.Wait()
 
 	return nil
 }
 
 func (mm *ModuleMgr) Run() {
-	mm.RLock()
-	defer mm.RUnlock()
-
-	for _, module := range mm.modules {
-		module.Run()
+	moduleLen := mm.Length()
+	if moduleLen <= 0 {
+		return
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(moduleLen)
+
+	mm.modules.Range(func(key, value any) bool {
+		go func(module iface.IModule) {
+			defer wg.Done()
+			module.Run()
+		}(value.(iface.IModule))
+		return true
+	})
+
+	wg.Wait()
 }
 
 func (mm *ModuleMgr) Stop() {
-	mm.RLock()
-	defer mm.RUnlock()
-
-	for _, module := range mm.modules {
-		module.Run()
+	moduleLen := mm.Length()
+	if moduleLen <= 0 {
+		return
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(moduleLen)
+
+	mm.modules.Range(func(key, value any) bool {
+		go func(module iface.IModule) {
+			defer wg.Done()
+			module.Stop()
+		}(value.(iface.IModule))
+		return true
+	})
+
+	wg.Wait()
 }

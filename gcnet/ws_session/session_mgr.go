@@ -12,8 +12,7 @@ func init() {
 }
 
 type SessionMgr struct {
-	online    map[uint64]iface.IWsSession
-	onlineMux sync.RWMutex
+	onlineMap sync.Map // uid:iface.IWsSession
 }
 
 func GetSessionMgr() *SessionMgr {
@@ -21,52 +20,39 @@ func GetSessionMgr() *SessionMgr {
 }
 
 func NewSessionMgr() *SessionMgr {
-	s := &SessionMgr{
-		online: make(map[uint64]iface.IWsSession),
-	}
+	s := &SessionMgr{}
 
 	return s
 }
 
 func (s *SessionMgr) Length() int {
-	s.onlineMux.RLock()
-	defer s.onlineMux.RUnlock()
+	length := 0
+	s.onlineMap.Range(func(key, value any) bool {
+		length++
+		return true
+	})
 
-	return len(s.online)
+	return length
 }
 
 func (s *SessionMgr) GetOne(UID uint64) iface.IWsSession {
-	s.onlineMux.RLock()
-	c, ok := s.online[UID]
-	s.onlineMux.RUnlock()
-	if !ok {
-		return nil
+	if v, ok := s.onlineMap.Load(UID); ok {
+		return v.(iface.IWsSession)
 	}
-
-	return c
+	return nil
 }
 
 func (s *SessionMgr) IsOnline(UID uint64) bool {
-	s.onlineMux.RLock()
-	defer s.onlineMux.RUnlock()
-
-	_, ok := s.online[UID]
-
+	_, ok := s.onlineMap.Load(UID)
 	return ok
 }
 
 func (s *SessionMgr) Add(ss iface.IWsSession) {
-	s.onlineMux.Lock()
-	defer s.onlineMux.Unlock()
-
-	SID := ss.GetID()
-	s.online[SID] = ss
+	s.onlineMap.Store(ss.GetID(), ss)
 }
 
 func (s *SessionMgr) Disconnect(SID uint64) {
-	s.onlineMux.Lock()
-	delete(s.online, SID)
-	s.onlineMux.Unlock()
+	s.onlineMap.Delete(SID)
 }
 
 func (s *SessionMgr) Once(UID uint64, fn func(SS iface.IWsSession)) {
@@ -80,19 +66,20 @@ func (s *SessionMgr) Once(UID uint64, fn func(SS iface.IWsSession)) {
 }
 
 func (s *SessionMgr) Range(fn func(UID uint64, SS iface.IWsSession)) {
-	s.onlineMux.RLock()
-	defer s.onlineMux.RUnlock()
-
-	for UID, SS := range s.online {
-		fn(UID, SS)
-	}
+	s.onlineMap.Range(func(key, value interface{}) bool {
+		uid := key.(uint64)
+		ss := value.(iface.IWsSession)
+		fn(uid, ss)
+		return true
+	})
 }
 
 func (s *SessionMgr) Close() {
-	s.onlineMux.RLock()
-	defer s.onlineMux.RUnlock()
-
-	for _, SS := range s.online {
-		SS.Close()
-	}
+	s.onlineMap.Range(func(key, value interface{}) bool {
+		uid := key.(uint64)
+		ss := value.(iface.IWsSession)
+		ss.Close()
+		s.onlineMap.Delete(uid)
+		return true
+	})
 }

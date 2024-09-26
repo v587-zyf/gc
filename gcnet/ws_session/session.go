@@ -22,17 +22,12 @@ type Session struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	cache     map[string]any
-	cacheLock sync.RWMutex
+	hooks  *Hooks
+	cache  sync.Map
+	method iface.IWsSessionMethod
 
 	inChan  chan []byte
 	outChan chan []byte
-
-	hooks *Hooks
-
-	method iface.ITpcSessionMethod
-
-	reconnectTimes int
 
 	once sync.Once
 }
@@ -45,8 +40,6 @@ func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 
 		inChan:  make(chan []byte, 1024),
 		outChan: make(chan []byte, 1024),
-
-		cache: make(map[string]any),
 
 		hooks: NewHooks(),
 	}
@@ -65,23 +58,17 @@ func (s *Session) Hooks() *Hooks {
 }
 
 func (s *Session) Set(key string, value any) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-
-	s.cache[key] = value
+	s.cache.Store(key, value)
 }
 func (s *Session) Get(key string) (any, bool) {
-	s.cacheLock.RLock()
-	defer s.cacheLock.RUnlock()
-
-	v, ok := s.cache[key]
+	v, ok := s.cache.Load(key)
+	if !ok {
+		v = nil
+	}
 	return v, ok
 }
 func (s *Session) Remove(key string) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-
-	delete(s.cache, key)
+	s.cache.Delete(key)
 }
 
 func (s *Session) GetID() uint64 {
@@ -155,13 +142,6 @@ func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProto
 
 func (s *Session) Send2User(msgID uint16, msg iface.IProtoMessage) error {
 	return s.Send(msgID, 0, s.GetID(), msg)
-}
-
-func (s *Session) GetReconnectTimes() int {
-	return s.reconnectTimes
-}
-func (s *Session) AddReconnectTimes() {
-	s.reconnectTimes++
 }
 
 func (s *Session) readPump() {

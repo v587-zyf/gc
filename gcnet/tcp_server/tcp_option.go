@@ -7,7 +7,7 @@ import (
 type TcpOption struct {
 	listenAddr string
 
-	method iface.ITpcSessionMethod
+	method iface.ITcpSessionMethod
 }
 
 type Option func(opts *TcpOption)
@@ -24,7 +24,7 @@ func WithListenAddr(addr string) Option {
 	}
 }
 
-func WithMethod(m iface.ITpcSessionMethod) Option {
+func WithMethod(m iface.ITcpSessionMethod) Option {
 	return func(opts *TcpOption) {
 		opts.method = m
 	}

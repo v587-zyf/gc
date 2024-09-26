@@ -42,7 +42,7 @@ func (h *Hooks) OnStop(fns ...Call) {
 	h.onStopFns = append(h.onStopFns, fns...)
 }
 
-func (h *Hooks) OnMethod(method iface.ITpcSessionMethod) {
+func (h *Hooks) OnMethod(method iface.ITcpSessionMethod) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

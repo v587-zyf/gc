@@ -24,15 +24,12 @@ type Session struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	cache     map[string]any
-	cacheLock sync.RWMutex
+	hooks  *Hooks
+	cache  sync.Map
+	method iface.ITcpSessionMethod
 
 	inChan  chan []byte
 	outChan chan []byte
-
-	hooks *Hooks
-
-	method iface.ITpcSessionMethod
 
 	once sync.Once
 }
@@ -45,8 +42,6 @@ func NewSession(ctx context.Context, conn net.Conn) *Session {
 
 		inChan:  make(chan []byte, 1024),
 		outChan: make(chan []byte, 1024),
-
-		cache: make(map[string]any),
 
 		hooks: NewHooks(),
 	}
@@ -74,23 +69,17 @@ func (s *Session) Hooks() *Hooks {
 }
 
 func (s *Session) Set(key string, value any) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-
-	s.cache[key] = value
+	s.cache.Store(key, value)
 }
 func (s *Session) Get(key string) (any, bool) {
-	s.cacheLock.RLock()
-	defer s.cacheLock.RUnlock()
-
-	v, ok := s.cache[key]
+	v, ok := s.cache.Load(key)
+	if !ok {
+		v = nil
+	}
 	return v, ok
 }
 func (s *Session) Remove(key string) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-
-	delete(s.cache, key)
+	s.cache.Delete(key)
 }
 
 func (s *Session) GetID() uint64 {
@@ -118,6 +107,20 @@ func (s *Session) GetConn() net.Conn {
 
 func (s *Session) GetCtx() context.Context {
 	return s.ctx
+}
+
+func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
+	sendBytes, err := fn(args...)
+	if err != nil {
+		return err
+	}
+
+	select {
+	case s.outChan <- sendBytes:
+		return nil
+	default:
+		return errcode.ERR_NET_SEND_TIMEOUT
+	}
 }
 
 func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProtoMessage) error {

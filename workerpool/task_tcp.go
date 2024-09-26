@@ -6,19 +6,19 @@ import (
 )
 
 func (p *WorkerPool) AssignNetTask(fn tpc_session.Recv, ss iface.ITcpSession, data any) error {
-	return Assign(&NetTask{
+	return Assign(&TcpTask{
 		Func:    fn,
 		Session: ss,
 		Data:    data,
 	})
 }
 
-type NetTask struct {
+type TcpTask struct {
 	Func    tpc_session.Recv
 	Session iface.ITcpSession
 	Data    any
 }
 
-func (t *NetTask) Do() {
+func (t *TcpTask) Do() {
 	t.Func(t.Session, t.Data)
 }
