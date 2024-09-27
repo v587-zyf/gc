@@ -1,6 +1,6 @@
 package iface
 
-import "github.com/golang/protobuf/proto"
+import "google.golang.org/protobuf/proto"
 
 type IProtoMessage interface {
 	proto.Message
