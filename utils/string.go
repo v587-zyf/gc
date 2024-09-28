@@ -6,11 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/v587-zyf/gc/enums"
 	"io"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 // MD5 md5加密
@@ -36,7 +38,6 @@ func Token() string {
 }
 
 func Int32ArrayToString(src []int32, flag string) (out string) {
-	// 没有的就直接返回
 	if len(src) == 0 {
 		return ""
 	}
@@ -53,7 +54,6 @@ func Int32ArrayToString(src []int32, flag string) (out string) {
 }
 
 func StringToInt32Array(src, flag string) (out []int32) {
-	// 没有的就直接返回
 	if src == "" {
 		return nil
 	}
@@ -127,6 +127,15 @@ func StrToInt(src string) int {
 
 	return data
 }
+func StringToBytes(s string) []byte {
+	dataPtr := (*byte)(unsafe.Pointer(&s))
+	length := len(s)
+
+	bytes := make([]byte, length)
+	copy(bytes, (*[1 << 30]byte)(unsafe.Pointer(dataPtr))[:length:length])
+
+	return bytes
+}
 
 // 表情解码
 func UnicodeEmojiDecode(s string) string {
@@ -184,4 +193,12 @@ func NewStringSlice(str string, sep string) []string {
 		intSliceList = append(intSliceList, v)
 	}
 	return intSliceList
+}
+func FnvString(s string) uint64 {
+	var h = uint64(enums.Offset64)
+	for _, b := range s {
+		h *= enums.Prime64
+		h ^= uint64(b)
+	}
+	return h
 }

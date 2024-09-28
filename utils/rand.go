@@ -84,8 +84,3 @@ Restart:
 	}
 	return res
 }
-
-// 向上取整float64
-func CeilFloat64(x float64) int {
-	return int(math.Ceil(RoundFloat(x, 2)))
-}

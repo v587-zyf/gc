@@ -1,6 +1,8 @@
 package utils
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 func DeepCopy(src, dst interface{}) error {
 	bytes, err := json.Marshal(src)

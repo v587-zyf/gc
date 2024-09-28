@@ -218,11 +218,45 @@ func InterfaceSlice2StringSlice(arr []interface{}) []string {
 	return strArr
 }
 
-// intmap -> string
 func IntMap2ToString(arr IntMap) string {
 	slice1 := make([]string, 0)
 	for k, v := range arr {
 		slice1 = append(slice1, fmt.Sprintf("%d,%d", k, v))
 	}
 	return strings.Join(slice1, ";")
+}
+
+// Checks if the given string elem is in the string slice elems.
+func InCollection(elem string, elems []string) bool {
+	for _, item := range elems {
+		if item == elem {
+			return true
+		}
+	}
+	return false
+}
+
+// GetIntersectionElem 获取两个字符串切片 a 和 b 的交集中的一个元素
+// Gets an element in the intersection of two string slices a and b
+func GetIntersectionElem(a, b []string) string {
+	for _, item := range a {
+		if InCollection(item, b) {
+			return item
+		}
+	}
+	return ""
+}
+
+// Split 分割给定的字符串 s，使用 sep 作为分隔符。空值将会被过滤掉。
+// Splits the given string s using sep as the separator. Empty values will be filtered out.
+func Split(s string, sep string) []string {
+	var list = strings.Split(s, sep)
+	var j = 0
+	for _, v := range list {
+		if v = strings.TrimSpace(v); v != "" {
+			list[j] = v
+			j++
+		}
+	}
+	return list[:j]
 }
