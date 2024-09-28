@@ -4,7 +4,7 @@ import (
 	"github.com/v587-zyf/gc/errcode"
 	"github.com/v587-zyf/gc/log"
 	"reflect"
-	"strings"
+	"runtime/debug"
 	"sync"
 
 	"go.uber.org/zap"
@@ -95,16 +95,7 @@ func (e *EventEmitter) Once(eventName string, fns ...ListenerFn) error {
 func (e *EventEmitter) Emit(eventName string, params ...interface{}) error {
 	defer func() {
 		if r := recover(); r != nil {
-			if err, ok := r.(error); ok {
-				log.Error("event emit err", zap.String("eventName", eventName), zap.String("err", err.Error()))
-			} else if err, ok := r.(string); ok {
-				if strings.HasPrefix(err, "reflect") {
-					err = "Emit" + err[7:]
-				}
-				log.Error("event emit err", zap.String("eventName", eventName), zap.String("err", err))
-			} else {
-				log.Error("event emit err", zap.String("eventName", eventName), zap.Reflect("err", err))
-			}
+			log.Error("readMsgLoop panic", zap.Any("r", r), zap.String("stack", string(debug.Stack())))
 		}
 	}()
 

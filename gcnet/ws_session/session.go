@@ -3,6 +3,7 @@ package ws_session
 import (
 	"context"
 	"github.com/gorilla/websocket"
+	"github.com/v587-zyf/gc/buffer_pool"
 	"github.com/v587-zyf/gc/enums"
 	"github.com/v587-zyf/gc/errcode"
 	"github.com/v587-zyf/gc/iface"
@@ -153,9 +154,18 @@ LOOP:
 		}
 
 		if message != nil && len(message) > 0 {
-			dataCopy := make([]byte, len(message))
-			copy(dataCopy, message)
-			s.hooks.ExecuteRecv(s, dataCopy)
+			buf := buffer_pool.GetBuffer()
+			if buf == nil {
+				log.Error("buffer_pool get err")
+				break LOOP
+			}
+			buf.Data = append(buf.Data, message...)
+			s.hooks.ExecuteRecv(s, buf.Data)
+			buffer_pool.Put(buf)
+
+			//dataCopy := make([]byte, len(message))
+			//copy(dataCopy, message)
+			//s.hooks.ExecuteRecv(s, dataCopy)
 		}
 	}
 

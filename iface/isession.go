@@ -45,18 +45,6 @@ type IWsSession interface {
 	IsHeartbeatTimeout(time time.Time) bool
 }
 
-type IWsSessionMgr interface {
-	Length() int
-	GetOne(UID uint64) IWsSession
-	IsOnline(UID uint64) bool
-
-	Add(ss IWsSession)
-	Disconnect(SID uint64)
-
-	Once(UID uint64, fn func(mgr IWsSession))
-	Range(fn func(uint64, IWsSession))
-}
-
 type ITcpSessionMethod interface {
 	Start(ss ITcpSession)
 	Recv(conn ITcpSession, data any)
