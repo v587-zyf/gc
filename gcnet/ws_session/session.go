@@ -1,16 +1,14 @@
 package ws_session
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"github.com/gorilla/websocket"
 	"github.com/v587-zyf/gc/enums"
 	"github.com/v587-zyf/gc/errcode"
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
-	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -26,10 +24,11 @@ type Session struct {
 	cache  sync.Map
 	method iface.IWsSessionMethod
 
-	inChan  chan []byte
 	outChan chan []byte
 
 	once sync.Once
+
+	heartbeatTime time.Time
 }
 
 func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
@@ -38,10 +37,11 @@ func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 		ctx:    ctx,
 		cancel: cancel,
 
-		inChan:  make(chan []byte, 1024),
 		outChan: make(chan []byte, 1024),
 
 		hooks: NewHooks(),
+
+		heartbeatTime: time.Now(),
 	}
 	s.conn = conn
 
@@ -49,6 +49,8 @@ func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 }
 
 func (s *Session) Start() {
+	s.hooks.ExecuteStart(s)
+
 	go s.readPump()
 	go s.IOPump()
 }
@@ -61,11 +63,7 @@ func (s *Session) Set(key string, value any) {
 	s.cache.Store(key, value)
 }
 func (s *Session) Get(key string) (any, bool) {
-	v, ok := s.cache.Load(key)
-	if !ok {
-		v = nil
-	}
-	return v, ok
+	return s.cache.Load(key)
 }
 func (s *Session) Remove(key string) {
 	s.cache.Delete(key)
@@ -83,8 +81,14 @@ func (s *Session) SetID(id uint64) {
 
 func (s *Session) Close() error {
 	s.once.Do(func() {
+		s.hooks.ExecuteStop(s)
+
+		close(s.outChan)
+
 		s.cancel()
 		s.conn.Close()
+
+		sessionMgr.unRegisterCh <- s
 	})
 
 	return nil
@@ -96,6 +100,18 @@ func (s *Session) GetConn() *websocket.Conn {
 
 func (s *Session) GetCtx() context.Context {
 	return s.ctx
+}
+
+func (s *Session) Login() {
+	sessionMgr.loginCh <- s
+}
+
+func (s *Session) Heartbeat() {
+	s.heartbeatTime = time.Now()
+}
+
+func (s *Session) IsHeartbeatTimeout(time time.Time) bool {
+	return s.heartbeatTime.Add(enums.HEARTBEAT_TIMEOUT).Before(time)
 }
 
 func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
@@ -112,57 +128,12 @@ func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) err
 	}
 }
 
-func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProtoMessage) error {
-	buf := new(bytes.Buffer)
-
-	binary.Write(buf, binary.BigEndian, uint32(msg.Size()))
-	binary.Write(buf, binary.BigEndian, msgID)
-	binary.Write(buf, binary.BigEndian, tag)
-	binary.Write(buf, binary.BigEndian, userID)
-
-	if msg.Size()+enums.MSG_HEADER_SIZE > enums.MSG_MAX_PACKET_SIZE {
-		return errcode.ERR_NET_PKG_LEN_LIMIT
-	}
-
-	data, err := msg.Marshal()
-	if err != nil {
-		log.Error("msg marshal err", zap.Uint64("userID", userID), zap.Any("msg", msg))
-		return err
-	}
-
-	buf.Write(data)
-
-	select {
-	case s.outChan <- buf.Bytes():
-		return nil
-	default:
-		return errcode.ERR_NET_SEND_TIMEOUT
-	}
-}
-
-func (s *Session) Send2User(msgID uint16, msg iface.IProtoMessage) error {
-	return s.Send(msgID, 0, s.GetID(), msg)
-}
-
 func (s *Session) readPump() {
 	defer func() {
 		if r := recover(); r != nil {
-			buf := make([]byte, 1<<10)
-			runtime.Stack(buf, true)
-			if err, ok := r.(error); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err.Error()), zap.ByteString("core", buf))
-			} else if err, ok := r.(string); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err), zap.ByteString("core", buf))
-			} else {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.Reflect("err", err), zap.ByteString("core", buf))
-			}
+			log.Error("readMsgLoop panic", zap.Any("r", r), zap.String("stack", string(debug.Stack())))
 		}
 	}()
-
-	s.hooks.ExecuteStart(s)
 
 LOOP:
 	for {
@@ -172,14 +143,19 @@ LOOP:
 				websocket.CloseGoingAway,
 				websocket.CloseNoStatusReceived,
 				websocket.CloseAbnormalClosure) {
-				log.Info("ws_server read err", zap.Error(err))
+				//log.Info("ws_server read err", zap.Error(err))
 			}
 			break LOOP
 		}
+		if len(message) > enums.MAX_MSG_SIZE {
+			log.Warn("消息超过最大长度，忽略", zap.Int("length", len(message)))
+			continue
+		}
+
 		if message != nil && len(message) > 0 {
 			dataCopy := make([]byte, len(message))
 			copy(dataCopy, message)
-			s.inChan <- dataCopy
+			s.hooks.ExecuteRecv(s, dataCopy)
 		}
 	}
 
@@ -189,42 +165,26 @@ LOOP:
 func (s *Session) IOPump() {
 	defer func() {
 		if r := recover(); r != nil {
-			buf := make([]byte, 1<<10)
-			runtime.Stack(buf, true)
-			if err, ok := r.(error); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err.Error()), zap.ByteString("core", buf))
-			} else if err, ok := r.(string); ok {
-				log.Error("core dump", zap.Uint64("ssID", s.GetID()),
-					zap.String("err", err), zap.ByteString("core", buf))
-			} else {
-				log.Error("core dump", zap.Uint64("ssID", s.GetID()),
-					zap.Reflect("err", err), zap.ByteString("core", buf))
-			}
+			log.Error("IOPump panic", zap.Any("r", r), zap.String("stack", string(debug.Stack())))
 		}
 	}()
 
 LOOP:
 	for {
 		select {
-		case data := <-s.inChan:
-			s.hooks.ExecuteRecv(s, data)
 		case data := <-s.outChan:
 			s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
 
-			err := s.conn.WriteMessage(websocket.BinaryMessage, data)
-			if err != nil {
-				msgID := binary.BigEndian.Uint16(data[0:2])
-				log.Warn("conn write err", zap.Uint64("userID", s.id),
-					zap.Uint16("msgID", msgID), zap.Int("len", len(data)), zap.Error(err))
+			if err := s.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+				//msgID := binary.BigEndian.Uint16(data[0:2])
+				//log.Warn("conn write err", zap.Uint64("userID", s.id),
+				//	zap.Uint16("msgID", msgID), zap.Int("len", len(data)), zap.Error(err))
 				break LOOP
 			}
 		case <-s.ctx.Done():
 			break LOOP
 		}
 	}
-
-	s.hooks.ExecuteStop(s)
 
 	s.Close()
 }

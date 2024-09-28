@@ -40,7 +40,7 @@ func (s *WsServer) Init(ctx context.Context, option ...any) (err error) {
 
 	s.upGrader = &websocket.Upgrader{
 		ReadBufferSize:  1024,
-		WriteBufferSize: 4096,
+		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
@@ -50,6 +50,8 @@ func (s *WsServer) Init(ctx context.Context, option ...any) (err error) {
 }
 
 func (s *WsServer) Start() {
+	go ws_session.GetSessionMgr().Start()
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/test", s.test).Methods("GET")
@@ -88,6 +90,7 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 
 	ss := ws_session.NewSession(context.Background(), wsConn)
 	ss.Hooks().OnMethod(s.options.method)
+	ws_session.GetSessionMgr().RegisterCh <- ss
 	ss.Start()
 }
 

@@ -6,6 +6,7 @@ const (
 	READ_BUFF_SIZE_INIT  int = 8 * 1024
 	READ_BUFF_SIZE_MAX   int = 64 * 1024 * 10
 	WRITE_BUFF_SIZE_INIT int = 16 * 1024
+	HEARTBEAT_TIMEOUT        = 30 * time.Second
 )
 
 const (
@@ -16,4 +17,6 @@ const (
 	CONN_WRITE_WAIT_TIME = 10 * time.Second
 
 	HEARTBEAT_INTERVAL = 10 * time.Second
+
+	MAX_MSG_SIZE = 1024 * 1024
 )
