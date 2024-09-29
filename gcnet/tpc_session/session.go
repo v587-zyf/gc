@@ -2,7 +2,6 @@ package tpc_session
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
