@@ -19,9 +19,9 @@ type SessionMgr struct {
 	online     map[uint64]iface.IWsSession
 	onlineLock sync.RWMutex
 
-	RegisterCh   chan *Session
-	loginCh      chan *Session
-	unRegisterCh chan *Session
+	RegisterCh   chan iface.IWsSession
+	loginCh      chan iface.IWsSession
+	unRegisterCh chan iface.IWsSession
 }
 
 func GetSessionMgr() *SessionMgr {
@@ -33,9 +33,9 @@ func NewSessionMgr() *SessionMgr {
 		clients: make(map[iface.IWsSession]struct{}),
 		online:  make(map[uint64]iface.IWsSession),
 
-		RegisterCh:   make(chan *Session, 1024),
-		loginCh:      make(chan *Session, 1024),
-		unRegisterCh: make(chan *Session, 1024),
+		RegisterCh:   make(chan iface.IWsSession, 1024),
+		loginCh:      make(chan iface.IWsSession, 1024),
+		unRegisterCh: make(chan iface.IWsSession, 1024),
 	}
 
 	return s

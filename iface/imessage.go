@@ -4,10 +4,10 @@ import "google.golang.org/protobuf/proto"
 
 type IProtoMessage interface {
 	proto.Message
-	Marshal() ([]byte, error)
-	MarshalTo([]byte) (int, error)
-	Unmarshal([]byte) error
-	Size() int
+	//Marshal() ([]byte, error)
+	//MarshalTo([]byte) (int, error)
+	//Unmarshal([]byte) error
+	//Size() int
 }
 
 type MessageFrame struct {
