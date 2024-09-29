@@ -124,31 +124,32 @@ func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) err
 }
 
 func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProtoMessage) error {
-	buf := new(bytes.Buffer)
-
-	binary.Write(buf, binary.BigEndian, uint32(msg.Size()))
-	binary.Write(buf, binary.BigEndian, msgID)
-	binary.Write(buf, binary.BigEndian, tag)
-	binary.Write(buf, binary.BigEndian, userID)
-
-	if msg.Size()+enums.MSG_HEADER_SIZE > enums.MSG_MAX_PACKET_SIZE {
-		return errcode.ERR_NET_PKG_LEN_LIMIT
-	}
-
-	data, err := msg.Marshal()
-	if err != nil {
-		log.Error("msg marshal err", zap.Uint64("userID", userID), zap.Any("msg", msg))
-		return err
-	}
-
-	buf.Write(data)
-
-	select {
-	case s.outChan <- buf.Bytes():
-		return nil
-	default:
-		return errcode.ERR_NET_SEND_TIMEOUT
-	}
+	//buf := new(bytes.Buffer)
+	//
+	//binary.Write(buf, binary.BigEndian, uint32(msg.Size()))
+	//binary.Write(buf, binary.BigEndian, msgID)
+	//binary.Write(buf, binary.BigEndian, tag)
+	//binary.Write(buf, binary.BigEndian, userID)
+	//
+	//if msg.Size()+enums.MSG_HEADER_SIZE > enums.MSG_MAX_PACKET_SIZE {
+	//	return errcode.ERR_NET_PKG_LEN_LIMIT
+	//}
+	//
+	//data, err := msg.Marshal()
+	//if err != nil {
+	//	log.Error("msg marshal err", zap.Uint64("userID", userID), zap.Any("msg", msg))
+	//	return err
+	//}
+	//
+	//buf.Write(data)
+	//
+	//select {
+	//case s.outChan <- buf.Bytes():
+	//	return nil
+	//default:
+	//	return errcode.ERR_NET_SEND_TIMEOUT
+	//}
+	return nil
 }
 
 func (s *Session) readPump() {
