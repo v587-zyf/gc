@@ -52,21 +52,20 @@ func (s *WsServer) Init(ctx context.Context, option ...any) (err error) {
 func (s *WsServer) Start() {
 	go ws_session.GetSessionMgr().Start()
 
-	r := mux.NewRouter()
+	var err error
 
-	r.HandleFunc("/api/test", s.test).Methods("GET")
-	r.HandleFunc("/api/webHook", s.webHook).Methods("POST")
-	if s.options.wsFunc != nil {
-		r.HandleFunc("/ws", s.options.wsFunc).Methods("GET")
-	} else {
+	if s.options.handler == nil {
+		r := mux.NewRouter()
+		r.HandleFunc("/api/test", s.test).Methods("GET")
+		r.HandleFunc("/api/webHook", s.webHook).Methods("POST")
 		r.HandleFunc("/ws", s.wsHandle).Methods("GET")
+		s.options.handler = r
 	}
 
-	var err error
 	if s.options.https {
-		err = http.ListenAndServeTLS(s.options.addr, s.options.pem, s.options.key, r)
+		err = http.ListenAndServeTLS(s.options.addr, s.options.pem, s.options.key, s.options.handler)
 	} else {
-		err = http.ListenAndServe(s.options.addr, r)
+		err = http.ListenAndServe(s.options.addr, s.options.handler)
 	}
 	if err != nil {
 		panic(err)
@@ -121,8 +120,5 @@ func (s *WsServer) test(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *WsServer) Stop() {
-
-}
-func (s *WsServer) Wait() {
 
 }

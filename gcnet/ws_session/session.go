@@ -9,7 +9,7 @@ import (
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
-	"runtime/debug"
+	"math"
 	"sync"
 	"time"
 )
@@ -27,8 +27,7 @@ type Session struct {
 
 	outChan chan []byte
 
-	once sync.Once
-
+	once          sync.Once
 	heartbeatTime time.Time
 }
 
@@ -107,12 +106,18 @@ func (s *Session) Login() {
 	sessionMgr.loginCh <- s
 }
 
+func (s *Session) DoSomething(fn func(args ...any) bool) bool {
+	return fn()
+}
+func (s *Session) CheckSomething(fn func(args ...any) bool) bool {
+	return fn()
+}
 func (s *Session) Heartbeat() {
 	s.heartbeatTime = time.Now()
 }
 
-func (s *Session) IsHeartbeatTimeout(time time.Time) bool {
-	return s.heartbeatTime.Add(enums.HEARTBEAT_TIMEOUT).Before(time)
+func (s *Session) IsHeartbeatTimeout(now time.Time) bool {
+	return now.After(s.heartbeatTime.Add(enums.HEARTBEAT_TIMEOUT))
 }
 
 func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
@@ -121,21 +126,20 @@ func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) err
 		return err
 	}
 
-	select {
-	case s.outChan <- sendBytes:
-		return nil
-	default:
-		return errcode.ERR_NET_SEND_TIMEOUT
+	for i := 0; i < 3; i++ {
+		select {
+		case s.outChan <- sendBytes:
+			return nil
+		default:
+			backoff := time.Duration(100) * time.Millisecond * time.Duration(2^i)
+			time.Sleep(backoff)
+		}
 	}
+
+	return errcode.ERR_NET_SEND_TIMEOUT
 }
 
 func (s *Session) readPump() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("readMsgLoop panic", zap.Any("r", r), zap.String("stack", string(debug.Stack())))
-		}
-	}()
-
 LOOP:
 	for {
 		_, message, err := s.conn.ReadMessage()
@@ -159,36 +163,47 @@ LOOP:
 				log.Error("buffer_pool get err")
 				break LOOP
 			}
-			buf.Data = append(buf.Data, message...)
+
+			buf.Data = ensureCapacity(buf.Data, len(message))
+			copy(buf.Data, message)
+
 			s.hooks.ExecuteRecv(s, buf.Data)
 			buffer_pool.Put(buf)
-
-			//dataCopy := make([]byte, len(message))
-			//copy(dataCopy, message)
-			//s.hooks.ExecuteRecv(s, dataCopy)
 		}
 	}
 
 	s.cancel()
 }
 
+func ensureCapacity(slice []byte, size int) []byte {
+	if cap(slice) >= size {
+		return slice[:size]
+	}
+	newSlice := make([]byte, size)
+	if len(slice) < size {
+		copy(newSlice, slice)
+	}
+	return newSlice
+}
+
 func (s *Session) IOPump() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("IOPump panic", zap.Any("r", r), zap.String("stack", string(debug.Stack())))
-		}
-	}()
+	var (
+		err     error
+		backoff time.Duration
+	)
 
 LOOP:
 	for {
 		select {
 		case data := <-s.outChan:
-			s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
-
-			if err := s.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-				//msgID := binary.BigEndian.Uint16(data[0:2])
-				//log.Warn("conn write err", zap.Uint64("userID", s.id),
-				//	zap.Uint16("msgID", msgID), zap.Int("len", len(data)), zap.Error(err))
+			for i := 0; i < 3; i++ {
+				if err = s.conn.WriteMessage(websocket.BinaryMessage, data); err == nil {
+					break
+				}
+				backoff = calculateBackoff(i)
+				time.Sleep(backoff)
+			}
+			if err != nil {
 				break LOOP
 			}
 		case <-s.ctx.Done():
@@ -197,4 +212,8 @@ LOOP:
 	}
 
 	s.Close()
+}
+
+func calculateBackoff(attempt int) time.Duration {
+	return time.Duration(100) * time.Millisecond * time.Duration(math.Min(math.Pow(2, float64(attempt)), float64(time.Second/time.Millisecond)))
 }

@@ -12,8 +12,8 @@ type WsOption struct {
 
 	https bool
 
-	wsFunc func(http.ResponseWriter, *http.Request)
-	method iface.IWsSessionMethod
+	handler http.Handler
+	method  iface.IWsSessionMethod
 }
 
 type Option func(opts *WsOption)
@@ -48,9 +48,9 @@ func WithHttps(https bool) Option {
 	}
 }
 
-func WithWsFunc(wsFunc func(http.ResponseWriter, *http.Request)) Option {
+func WithWsFunc(handler http.Handler) Option {
 	return func(opts *WsOption) {
-		opts.wsFunc = wsFunc
+		opts.handler = handler
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/gorilla/websocket"
 	"net"
-	"time"
 )
 
 type ITcpSession interface {
@@ -40,9 +39,8 @@ type IWsSession interface {
 
 	SendMsg(fn func(args ...any) ([]byte, error), args ...any) error
 
-	Login()
-	Heartbeat()
-	IsHeartbeatTimeout(time time.Time) bool
+	DoSomething(fn func(args ...any) bool) bool
+	CheckSomething(fn func(args ...any) bool) bool
 }
 
 type ITcpSessionMethod interface {
@@ -51,6 +49,7 @@ type ITcpSessionMethod interface {
 	Stop(ss ITcpSession)
 }
 type IWsSessionMethod interface {
+	Name() string
 	Start(ss IWsSession)
 	Recv(conn IWsSession, data any)
 	Stop(ss IWsSession)

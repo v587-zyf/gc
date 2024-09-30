@@ -22,7 +22,9 @@ func InitGrpcClientStream(opts ...any) (err error) {
 
 	return nil
 }
-
+func Get() *GrpcServerStreamMgr {
+	return defGrpcStreamClientMgr
+}
 func Add(st int32, id uint64, stream grpc.ServerStream) {
 	defGrpcStreamClientMgr.Add(st, id, stream)
 }

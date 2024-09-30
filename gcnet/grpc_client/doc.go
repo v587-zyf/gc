@@ -16,6 +16,10 @@ func InitGrpcClient(ctx context.Context, opts ...any) (err error) {
 	return nil
 }
 
+func Get() *GrpcClient {
+	return defGrpcClient
+}
+
 func GetClient() *grpc.ClientConn {
 	return defGrpcClient.GetClient()
 }

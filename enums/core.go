@@ -20,3 +20,8 @@ const (
 
 	MAX_MSG_SIZE = 1024 * 1024
 )
+
+const (
+	CONN_READ_LIMIT    = 1024
+	CONN_READ_DEADLINE = 60 * time.Second
+)

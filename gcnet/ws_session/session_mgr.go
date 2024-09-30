@@ -171,7 +171,10 @@ func (s *SessionMgr) ClearTimeout() {
 
 	allClients := s.GetAll()
 	for session := range allClients {
-		if session.IsHeartbeatTimeout(currentTime) {
+		var fn = func(args ...any) bool {
+			return session.(*Session).IsHeartbeatTimeout(currentTime)
+		}
+		if session.CheckSomething(fn) {
 			session.Close()
 		}
 	}

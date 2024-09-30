@@ -47,6 +47,9 @@ func (s *GrpcServer) Init(ctx context.Context, option ...any) (err error) {
 func (s *GrpcServer) GetServer() *grpc.Server {
 	return s.server
 }
+func (s *GrpcServer) GetCtx() context.Context {
+	return s.ctx
+}
 
 func (s *GrpcServer) Start() {
 	err := s.server.Serve(s.listener)

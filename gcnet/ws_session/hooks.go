@@ -8,72 +8,94 @@ import (
 type Hooks struct {
 	mu sync.Mutex
 
-	onStartFns []Call
-	onRecvFns  []Recv
-	onStopFns  []Call
+	startMethods map[string]Call
+	recvMethods  map[string]Recv
+	stopMethods  map[string]Call
 }
 
 func NewHooks() *Hooks {
 	return &Hooks{
-		onStartFns: make([]Call, 0, 2),
-		onRecvFns:  make([]Recv, 0, 2),
-		onStopFns:  make([]Call, 0, 2),
+		startMethods: make(map[string]Call),
+		recvMethods:  make(map[string]Recv),
+		stopMethods:  make(map[string]Call),
 	}
 }
 
-func (h *Hooks) OnStart(fns ...Call) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Hooks) OnStart(key string, fn Call) {
+	h.lock()
 
-	h.onStartFns = append(h.onStartFns, fns...)
+	if fn != nil {
+		h.startMethods[key] = fn
+	}
 }
 
-func (h *Hooks) OnRecv(fns ...Recv) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Hooks) OnRecv(key string, fn Recv) {
+	h.lock()
 
-	h.onRecvFns = append(h.onRecvFns, fns...)
+	if fn != nil {
+		h.recvMethods[key] = fn
+	}
 }
 
-func (h *Hooks) OnStop(fns ...Call) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Hooks) OnStop(key string, fn Call) {
+	h.lock()
 
-	h.onStopFns = append(h.onStopFns, fns...)
+	if fn != nil {
+		h.stopMethods[key] = fn
+	}
 }
 
 func (h *Hooks) OnMethod(method iface.IWsSessionMethod) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.lock()
 
-	h.onStartFns = append(h.onStartFns, method.Start)
-	h.onRecvFns = append(h.onRecvFns, method.Recv)
-	h.onStopFns = append(h.onStopFns, method.Stop)
+	if method != nil {
+		h.OnStart(method.Name(), method.Start)
+		h.OnRecv(method.Name(), method.Recv)
+		h.OnStop(method.Name(), method.Stop)
+	}
 }
 
 func (h *Hooks) OnHooks(hooks *Hooks) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.lock()
 
-	h.onStartFns = append(h.onStartFns, hooks.onStartFns...)
-	h.onRecvFns = append(h.onRecvFns, hooks.onRecvFns...)
-	h.onStopFns = append(h.onStopFns, hooks.onStopFns...)
+	for key, fn := range hooks.startMethods {
+		h.startMethods[key] = fn
+	}
+
+	for key, fn := range hooks.recvMethods {
+		h.recvMethods[key] = fn
+	}
+
+	for key, fn := range hooks.stopMethods {
+		h.stopMethods[key] = fn
+	}
 }
 
 func (h *Hooks) ExecuteStart(ss iface.IWsSession) {
-	for _, v := range h.onStartFns {
+	h.lock()
+
+	for _, v := range h.startMethods {
 		v(ss)
 	}
 }
 
 func (h *Hooks) ExecuteRecv(ss iface.IWsSession, data []byte) {
-	for _, v := range h.onRecvFns {
+	h.lock()
+
+	for _, v := range h.recvMethods {
 		v(ss, data)
 	}
 }
 
 func (h *Hooks) ExecuteStop(ss iface.IWsSession) {
-	for _, v := range h.onStopFns {
+	h.lock()
+
+	for _, v := range h.stopMethods {
 		v(ss)
 	}
+}
+
+func (h *Hooks) lock() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 }

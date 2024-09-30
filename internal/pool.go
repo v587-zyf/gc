@@ -23,7 +23,7 @@ func NewBufferPool(left, right uint32) *BufferPool {
 	var p = &BufferPool{
 		begin:  begin,
 		end:    end,
-		shards: map[int]*sync.Pool{},
+		shards: make(map[int]*sync.Pool, end-begin+1),
 	}
 	for i := begin; i <= end; i *= 2 {
 		capacity := i
@@ -63,11 +63,11 @@ func (p *BufferPool) Get(n int) *bytes.Buffer {
 // rounds up the given uint32 value to the nearest power of 2
 func binaryCeil(v uint32) uint32 {
 	v--
-	v |= v >> 1
-	v |= v >> 2
-	v |= v >> 4
-	v |= v >> 8
-	v |= v >> 16
+	v |= v >> 1  // 置位最低位
+	v |= v >> 2  // 置位次低位
+	v |= v >> 4  // 置位更高位
+	v |= v >> 8  // 置位更高位
+	v |= v >> 16 // 置位最高位
 	v++
 	return v
 }

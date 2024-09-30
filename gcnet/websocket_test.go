@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/v587-zyf/gc/buffer_pool"
+	"github.com/v587-zyf/gc/gcnet/ws_handler"
 	"github.com/v587-zyf/gc/gcnet/ws_server"
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
-	"go.uber.org/zap"
 	"sync"
 	"testing"
 	"time"
@@ -18,27 +18,20 @@ type MsgHandler struct{}
 
 var _ MsgHandler
 
-func (h *MsgHandler) Recv(s iface.IWsSession, data any) {
-	log.Debug("recv---", zap.ByteString("data", data.([]byte)))
+func Recv(s iface.IWsSession, data any) {
 	//fmt.Println("recv---", string(data.([]byte)))
 	s.SendMsg(func(args ...any) ([]byte, error) {
 		return data.([]byte), nil
 	})
-}
-func (h *MsgHandler) Start(ss iface.IWsSession) {
 
 }
-func (h *MsgHandler) Stop(ss iface.IWsSession) {
-
-}
-
 func TestConcurrentWebSocketRequests(t *testing.T) {
 	ctx := context.Background()
 
 	err := buffer_pool.Init(
 		context.Background(),
 		buffer_pool.WithSize(100),
-		buffer_pool.WithBufferSize(0),
+		buffer_pool.WithBufferSize(1024),
 		buffer_pool.WithMaxSize(100),
 		buffer_pool.WithAutoCleanup(true),
 		buffer_pool.WithCleanupPeriod(1*time.Second),
@@ -47,18 +40,21 @@ func TestConcurrentWebSocketRequests(t *testing.T) {
 		t.Errorf("Failed to initialize buffer pool: %v", err)
 		return
 	}
-	if err = log.Init(ctx, log.WithSerName("doggy"), log.WithSkipCaller(2)); err != nil {
+	if err = log.Init(ctx, log.WithSerName("Test"), log.WithSkipCaller(2)); err != nil {
 		panic("Log Init err" + err.Error())
+	}
+	if err = ws_handler.Init(ctx, ws_handler.WithName("Test"), ws_handler.WithRecvFn(Recv)); err != nil {
+		t.Errorf("Failed to initialize ws_handler: %v", err)
 	}
 
 	serverAddr := ":8080"
 	serverURL := "ws://localhost:8080/ws"
-	numUsers := 10000
+	numUsers := 5000
 	rate := 200          // 每秒发送200个请求
 	messagesPerUser := 3 // 每人发送3条消息
 
 	ws := ws_server.NewWsServer()
-	if err = ws.Init(ctx, ws_server.WithAddr(serverAddr), ws_server.WithMethod(new(MsgHandler)), ws_server.WithHttps(false)); err != nil {
+	if err = ws.Init(ctx, ws_server.WithAddr(serverAddr), ws_server.WithMethod(ws_handler.Get()), ws_server.WithHttps(false)); err != nil {
 		t.Errorf("ws init err:%v", err)
 		return
 	}

@@ -64,10 +64,10 @@ func New[T any](capacity int) *Deque[T] {
 
 // retrieves an element based on its address
 func (c *Deque[T]) Get(addr Pointer) *Element[T] {
-	if addr > 0 {
-		return &(c.elements[addr])
+	if addr < 0 || addr >= Pointer(len(c.elements)) {
+		return nil
 	}
-	return nil
+	return &(c.elements[addr])
 }
 
 // getElement 追加元素一定要先调用此方法, 因为追加可能会造成扩容, 地址发生变化!!!
@@ -92,6 +92,10 @@ func (c *Deque[T]) getElement() *Element[T] {
 }
 
 func (c *Deque[T]) putElement(ele *Element[T]) {
+	if ele.addr < 0 || ele.addr >= Pointer(len(c.elements)) {
+		return
+	}
+
 	c.stack.Push(ele.addr)
 	*ele = c.template
 }
@@ -106,6 +110,9 @@ func (c *Deque[T]) autoReset() {
 	c.head, c.tail, c.length = Nil, Nil, 0
 	c.stack = c.stack[:0]
 	c.elements = c.elements[:1]
+	for i := range c.elements {
+		c.elements[i] = Element[T]{}
+	}
 }
 
 // returns the length of the deque
@@ -169,6 +176,10 @@ func (c *Deque[T]) doPushBack(ele *Element[T]) {
 
 // pops an element from the front of the deque and returns its value
 func (c *Deque[T]) PopFront() (value T) {
+	if c.head.IsNil() {
+		return
+	}
+
 	if ele := c.Front(); ele != nil {
 		value = ele.value
 		c.doRemove(ele)
@@ -182,6 +193,10 @@ func (c *Deque[T]) PopFront() (value T) {
 
 // pops an element from the back of the deque and returns its value
 func (c *Deque[T]) PopBack() (value T) {
+	if c.tail.IsNil() {
+		return
+	}
+
 	if ele := c.Back(); ele != nil {
 		value = ele.value
 		c.doRemove(ele)
@@ -242,6 +257,10 @@ func (c *Deque[T]) InsertBefore(value T, mark Pointer) *Element[T] {
 
 // moves the element at the specified address to the back of the deque
 func (c *Deque[T]) MoveToBack(addr Pointer) {
+	if addr.IsNil() {
+		return
+	}
+
 	if ele := c.Get(addr); ele != nil {
 		c.doRemove(ele)
 		ele.prev, ele.next = Nil, Nil
@@ -251,6 +270,10 @@ func (c *Deque[T]) MoveToBack(addr Pointer) {
 
 // moves the element at the specified address to the front of the deque
 func (c *Deque[T]) MoveToFront(addr Pointer) {
+	if addr.IsNil() {
+		return
+	}
+
 	if ele := c.Get(addr); ele != nil {
 		c.doRemove(ele)
 		ele.prev, ele.next = Nil, Nil
@@ -294,11 +317,19 @@ func (c *Deque[T]) doRemove(ele *Element[T]) {
 		prev.next = next.addr
 		next.prev = prev.addr
 	case 2:
-		next.prev = Nil
-		c.head = next.addr
+		next.prev = ele.prev
+		if ele.prev.IsNil() {
+			c.head = next.addr
+		} else {
+			c.Get(ele.prev).next = next.addr
+		}
 	case 1:
-		prev.next = Nil
-		c.tail = prev.addr
+		prev.next = ele.next
+		if ele.next.IsNil() {
+			c.tail = prev.addr
+		} else {
+			c.Get(ele.next).prev = prev.addr
+		}
 	default:
 		c.head = Nil
 		c.tail = Nil
@@ -307,6 +338,10 @@ func (c *Deque[T]) doRemove(ele *Element[T]) {
 
 // iterates over each element in the deque and executes the given function on each element
 func (c *Deque[T]) Range(f func(ele *Element[T]) bool) {
+	if c.head.IsNil() {
+		return
+	}
+
 	for i := c.Get(c.head); i != nil; i = c.Get(i.next) {
 		if !f(i) {
 			break
@@ -317,10 +352,8 @@ func (c *Deque[T]) Range(f func(ele *Element[T]) bool) {
 // deep copy
 func (c *Deque[T]) Clone() *Deque[T] {
 	var v = *c
-	v.elements = make([]Element[T], len(c.elements))
-	v.stack = make([]Pointer, len(c.stack))
-	copy(v.elements, c.elements)
-	copy(v.stack, c.stack)
+	v.elements = append(make([]Element[T], 0, len(c.elements)), c.elements...)
+	v.stack = append(make([]Pointer, 0, len(c.stack)), c.stack...)
 	return &v
 }
 

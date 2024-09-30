@@ -74,6 +74,9 @@ func (bp *BufferPool) Get() *Buffer {
 	bp.stats["get"]++
 
 	select {
+	case <-bp.ctx.Done():
+		bp.mu.Unlock()
+		return nil
 	case buf := <-bp.Pool:
 		bp.stats["hit"]++
 		return buf
@@ -100,6 +103,9 @@ func (bp *BufferPool) Put(buf *Buffer) {
 	bp.releaseCount++
 
 	select {
+	case <-bp.ctx.Done():
+		bp.mu.Unlock()
+		return
 	case bp.Pool <- buf:
 		//fmt.Printf("释放缓冲区，当前池大小：%d\n", len(bp.Pool))
 	default:

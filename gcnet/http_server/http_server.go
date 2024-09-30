@@ -170,6 +170,6 @@ func (s *HttpServer) Use(fn OriginHandlerFn) {
 //	})
 //
 // This method will match all HTTP verbs: GET, POST, PUT, HEAD etc...
-func (s *HttpServer) UseOrigin(args ...interface{}) {
+func (s *HttpServer) UseOrigin(args ...any) {
 	s.app.Use(args...)
 }

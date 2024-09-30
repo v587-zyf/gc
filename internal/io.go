@@ -1,19 +1,27 @@
 package internal
 
 import (
+	"errors"
 	"io"
+	"os"
 	"unicode/utf8"
 )
 
 // reads exactly len(data) bytes, otherwise returns an error
 func ReadN(reader io.Reader, data []byte) error {
 	_, err := io.ReadFull(reader, data)
+	if err == io.EOF {
+		return errors.New("unexpected end of file while reading")
+	}
 	return err
 }
 
 // writes the content to the writer
 func WriteN(writer io.Writer, content []byte) error {
 	_, err := writer.Write(content)
+	if errors.Is(err, os.ErrClosed) {
+		return errors.New("writer closed while writing")
+	}
 	return err
 }
 
@@ -23,12 +31,6 @@ func CheckEncoding(enabled bool, opcode uint8, payload []byte) bool {
 		return utf8.Valid(payload)
 	}
 	return true
-}
-
-type Payload interface {
-	io.WriterTo
-	Len() int
-	CheckEncoding(enabled bool, opcode uint8) bool
 }
 
 type Buffers [][]byte
@@ -43,24 +45,24 @@ func (b Buffers) CheckEncoding(enabled bool, opcode uint8) bool {
 }
 
 func (b Buffers) Len() int {
-	var sum = 0
-	for i, _ := range b {
-		sum += len(b[i])
+	var sum int
+	for _, buffer := range b {
+		sum += len(buffer)
 	}
 	return sum
 }
 
 // WriteTo 可重复写
 func (b Buffers) WriteTo(w io.Writer) (int64, error) {
-	var n = 0
-	for i, _ := range b {
-		x, err := w.Write(b[i])
-		n += x
+	var totalWritten int
+	for _, buffer := range b {
+		n, err := w.Write(buffer)
+		totalWritten += n
 		if err != nil {
-			return int64(n), err
+			return int64(totalWritten), err
 		}
 	}
-	return int64(n), nil
+	return int64(totalWritten), nil
 }
 
 type Bytes []byte
