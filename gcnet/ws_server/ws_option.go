@@ -5,6 +5,12 @@ import (
 	"net/http"
 )
 
+type HandlerFunc struct {
+	path    string
+	fn      func(http.ResponseWriter, *http.Request)
+	methods string
+}
+
 type WsOption struct {
 	addr string
 	pem  string
@@ -12,14 +18,17 @@ type WsOption struct {
 
 	https bool
 
-	handler http.Handler
-	method  iface.IWsSessionMethod
+	handler      http.Handler
+	handlerFuncs []HandlerFunc
+	method       iface.IWsSessionMethod
 }
 
 type Option func(opts *WsOption)
 
 func NewWsOption() *WsOption {
-	o := &WsOption{}
+	o := &WsOption{
+		handlerFuncs: make([]HandlerFunc, 0),
+	}
 
 	return o
 }
@@ -57,5 +66,11 @@ func WithWsFunc(handler http.Handler) Option {
 func WithMethod(m iface.IWsSessionMethod) Option {
 	return func(opts *WsOption) {
 		opts.method = m
+	}
+}
+
+func WithHandlerFunc(path string, fn func(http.ResponseWriter, *http.Request), methods string) Option {
+	return func(opts *WsOption) {
+		opts.handlerFuncs = append(opts.handlerFuncs, HandlerFunc{path, fn, methods})
 	}
 }

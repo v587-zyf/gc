@@ -6,7 +6,7 @@ import (
 
 var defWsSer *WsServer
 
-func Init(ctx context.Context, opts ...any) (err error) {
+func Init(ctx context.Context, opts ...Option) (err error) {
 	defWsSer = NewWsServer()
 	if err = defWsSer.Init(ctx, opts...); err != nil {
 		return err

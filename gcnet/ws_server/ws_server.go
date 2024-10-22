@@ -31,11 +31,11 @@ func NewWsServer() *WsServer {
 	return s
 }
 
-func (s *WsServer) Init(ctx context.Context, option ...any) (err error) {
+func (s *WsServer) Init(ctx context.Context, option ...Option) (err error) {
 	s.ctx, s.cancel = context.WithCancel(ctx)
 
 	for _, opt := range option {
-		opt.(Option)(s.options)
+		opt(s.options)
 	}
 
 	s.upGrader = &websocket.Upgrader{
@@ -60,6 +60,11 @@ func (s *WsServer) Start() {
 		r.HandleFunc("/api/webHook", s.webHook).Methods("POST")
 		r.HandleFunc("/ws", s.wsHandle).Methods("GET")
 		s.options.handler = r
+	}
+	if len(s.options.handlerFuncs) > 0 {
+		for _, v := range s.options.handlerFuncs {
+			s.options.handler.(*mux.Router).HandleFunc(v.path, v.fn).Methods(v.methods)
+		}
 	}
 
 	if s.options.https {
