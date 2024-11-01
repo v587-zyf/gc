@@ -25,7 +25,7 @@ func (w *worker) run(p *WorkerPool) {
 				errField = zap.Any("err", r)
 			}
 
-			stackBuf := make([]byte, 512)
+			stackBuf := make([]byte, 896)
 			stackLen := runtime.Stack(stackBuf, true)
 
 			log.Error("worker panic", errField, zap.ByteString("stack", stackBuf[:stackLen]))

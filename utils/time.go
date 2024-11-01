@@ -25,6 +25,37 @@ func GetYearWeek(t time.Time) int {
 	return date
 }
 
+// 20247
+func GetYearMonth(t time.Time) int {
+	year, month, _ := t.Date()
+	date := year*100 + int(month)
+	return date
+}
+
+// IsLastDayOfMonth 检查当前时间是否是所在月份的最后一天
+func IsLastDayOfMonth(t time.Time) bool {
+	year, month, _ := t.Date()
+	lastDayOfMonth := time.Date(year, month+1, 0, 0, 0, 0, 0, t.Location())
+	return t.YearDay() == lastDayOfMonth.YearDay()
+}
+
+// IsToday 检查给定的时间戳是否表示今天的日期
+func IsToday(timestamp int64) bool {
+	now := time.Now().Unix()
+	t := time.Unix(timestamp, 0)
+	today := time.Unix(now, 0).Truncate(24 * time.Hour)
+	return t.Truncate(24 * time.Hour).Equal(today)
+}
+
+// IsYesterday 判断给定的时间是否是昨天
+func IsYesterday(t time.Time) bool {
+	now := time.Now()
+	yesterday := now.AddDate(0, 0, -1)
+	return t.Year() == yesterday.Year() &&
+		t.Month() == yesterday.Month() &&
+		t.Day() == yesterday.Day()
+}
+
 // 用字符串格式化时间
 func GetTimeByData(dateStr string) (time.Time, error) {
 	loc, _ := time.LoadLocation("Local")
