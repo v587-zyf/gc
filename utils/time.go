@@ -64,11 +64,10 @@ func GetTimeByData(dateStr string) (time.Time, error) {
 
 // 获取指定时间到现在多少天
 func GetTheDays(startTime time.Time) int {
-	serverOpenTime := startTime
-	serverOpenZeroTime := GetZeroTime(serverOpenTime).Unix()
+	startTimeZeroTime := GetZeroTime(startTime).Unix()
 	nowTime := time.Now()
 	nowZeroTime := GetZeroTime(nowTime).Unix()
-	openDays := (nowZeroTime-serverOpenZeroTime)/(24*60*60) + 1
+	openDays := (nowZeroTime-startTimeZeroTime)/(24*60*60) + 1
 	return int(openDays)
 }
 
@@ -92,7 +91,7 @@ func GetDateInt(t time.Time) int {
 }
 
 // 获取两个时间差多少小时
-func getHourDiffer(startTime, endTime string) int64 {
+func GetHourDiffer(startTime, endTime string) int64 {
 	var hour int64
 	t1, err := time.ParseInLocation("2006-01-02 15:04:05", startTime, time.Local)
 	t2, err := time.ParseInLocation("2006-01-02 15:04:05", endTime, time.Local)

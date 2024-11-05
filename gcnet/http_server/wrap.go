@@ -89,7 +89,7 @@ func NewResponseHandlerFn(fn ResponseHandlerFn) func(c *fiber.Ctx) error {
 		if err != nil {
 			var errCode errcode.ErrCode
 			if errors.As(err, &errCode) && !errors.Is(errCode, errcode.ERR_SUCCEED) {
-				return err
+				return SendError(c, err)
 			}
 		}
 		return SendResponse(c, resp)

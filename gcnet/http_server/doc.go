@@ -7,7 +7,7 @@ import (
 
 var defHttpServer *HttpServer
 
-func InitGrpcClient(ctx context.Context, opts ...any) (err error) {
+func Init(ctx context.Context, opts ...any) (err error) {
 	defHttpServer = NewHttpServer()
 	if err = defHttpServer.Init(ctx, opts...); err != nil {
 		return err
