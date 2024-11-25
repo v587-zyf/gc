@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/v587-zyf/gc/gcnet/ws_session"
 	"github.com/v587-zyf/gc/iface"
+	"time"
 )
 
 var defaultWorkPoll *WorkerPool
@@ -26,9 +27,8 @@ func Assign(task iface.ITask) error {
 }
 
 func AssignWsTask(fn ws_session.Recv, ss iface.IWsSession, data any) error {
-	return defaultWorkPoll.Assign(&WsTask{
-		Func:    fn,
-		Session: ss,
-		Data:    data,
-	})
+	return defaultWorkPoll.AssignWsTask(fn, ss, data)
+}
+func AssignDelayTask(delay time.Duration, fn ws_session.Recv, ss iface.IWsSession, data any) error {
+	return defaultWorkPoll.AssignDelaySendTask(delay, fn, ss, data)
 }

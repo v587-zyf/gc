@@ -48,6 +48,10 @@ func RoundFloat(f float64, n int) float64 {
 	// 将浮点数乘以10的n次方，四舍五入到最近的整数，然后再除以10的n次方。
 	return math.Round(f*shift) / shift
 }
+func RoundUp(num float64, places int) float64 {
+	shift := math.Pow(10, float64(places))
+	return math.Ceil(num*shift) / shift
+}
 
 // 包含上下限 [min, max]
 func RandomWithAll(min, max int) int64 {

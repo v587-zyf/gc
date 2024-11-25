@@ -1,33 +1,28 @@
 package worker_pool
 
 import (
+	"github.com/v587-zyf/gc/gcnet/ws_session"
 	"github.com/v587-zyf/gc/iface"
 	"time"
 )
 
 type DelaySendTask struct {
-	Delay  time.Duration
-	MsgID  uint16
-	Tag    uint32
-	UserID uint64
-	Msg    iface.IProtoMessage
-	Func   func(mid uint16, tag uint32, uid uint64, pb iface.IProtoMessage)
+	Delay   time.Duration
+	Func    ws_session.Recv
+	Session iface.IWsSession
+	Data    any
 }
 
 func (t *DelaySendTask) Do() {
 	time.Sleep(t.Delay)
-	t.Func(t.MsgID, t.Tag, t.UserID, t.Msg)
+	t.Func(t.Session, t.Data)
 }
 
-func AssignDelaySendTask(delay time.Duration,
-	fn func(mid uint16, tag uint32, uid uint64, pb iface.IProtoMessage),
-	msgID uint16, tag uint32, userID uint64, msg iface.IProtoMessage) error {
+func (p *WorkerPool) AssignDelaySendTask(delay time.Duration, fn ws_session.Recv, ss iface.IWsSession, data any) error {
 	return Assign(&DelaySendTask{
-		Delay:  delay,
-		MsgID:  msgID,
-		Tag:    tag,
-		UserID: userID,
-		Msg:    msg,
-		Func:   fn,
+		Delay:   delay,
+		Func:    fn,
+		Session: ss,
+		Data:    data,
 	})
 }
