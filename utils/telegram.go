@@ -7,48 +7,7 @@ import (
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"net/url"
-	"sort"
-	"strings"
 )
-
-type param struct {
-	Key   string
-	Value string
-}
-
-// 按键的ASCII值排序
-type byKey []param
-
-func (a byKey) Len() int           { return len(a) }
-func (a byKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
-
-func TgParseData(data string) (url.Values, error) {
-	return url.ParseQuery(data)
-}
-
-func TgGetCheckData(urlQuery url.Values) string {
-	var params []param
-	for k, vs := range urlQuery {
-		if k == "hash" {
-			continue
-		}
-		params = append(params, param{Key: k, Value: vs[0]})
-	}
-	sort.Sort(byKey(params))
-
-	var sortedQuery strings.Builder
-	for _, p := range params {
-		if sortedQuery.Len() > 0 {
-			sortedQuery.WriteRune('\n')
-		}
-		sortedQuery.WriteString(p.Key)
-		sortedQuery.WriteRune('=')
-		sortedQuery.WriteString(p.Value)
-	}
-
-	return sortedQuery.String()
-}
 
 func TgGetHmacSha256(key, data []byte) []byte {
 	h := hmac.New(sha256.New, key)
@@ -58,12 +17,17 @@ func TgGetHmacSha256(key, data []byte) []byte {
 }
 
 func TgCheck(initData, loginToken string) (tgDate url.Values, res bool) {
-	tgDate, err := TgParseData(initData)
+	tgDate, err := UrlParamParse(initData)
 	if err != nil {
 		log.Error("utils.TgParseData", zap.Error(err), zap.String("initData", initData))
 		return
 	}
-	dataCheckString := TgGetCheckData(tgDate)
+	dataCheckString, err := UrlParamSort(tgDate, nil, "hash")
+	if err != nil {
+		log.Error("Tg Data error", zap.Error(err))
+		return
+	}
+
 	botTokenData := "WebAppData"
 	secret := TgGetHmacSha256([]byte(botTokenData), []byte(loginToken))
 	hash := hex.EncodeToString(TgGetHmacSha256([]byte(secret), []byte(dataCheckString)))

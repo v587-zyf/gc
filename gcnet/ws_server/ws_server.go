@@ -3,12 +3,14 @@ package ws_server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/v587-zyf/gc/gcnet/ws_session"
 	"github.com/v587-zyf/gc/log"
 	"github.com/v587-zyf/gc/telegram/go_tg_bot"
+	"github.com/v587-zyf/gc/utils"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -96,6 +98,13 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 	ss.Hooks().OnMethod(s.options.method)
 	ws_session.GetSessionMgr().RegisterCh <- ss
 	ss.Start()
+
+	ip, err := utils.GetHttpIP(r)
+	if err != nil {
+		fmt.Println("get ip err:", err)
+		return
+	}
+	ss.Set("ip", ip)
 }
 
 func (s *WsServer) webHook(w http.ResponseWriter, r *http.Request) {
