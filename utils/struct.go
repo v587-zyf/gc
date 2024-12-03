@@ -9,7 +9,11 @@ import (
 )
 
 // StructToValues 将结构体转换为 url.Values
-func StructToValues(v interface{}) (url.Values, error) {
+func StructToValuesByKey(v any, key string) (url.Values, error) {
+	if key == "" {
+		return nil, fmt.Errorf("key cannot be empty")
+	}
+
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("input must be a struct")
@@ -21,7 +25,7 @@ func StructToValues(v interface{}) (url.Values, error) {
 		field := val.Field(i)
 		structField := val.Type().Field(i)
 
-		tag := structField.Tag.Get("url")
+		tag := structField.Tag.Get(key)
 		if tag == "" {
 			continue
 		}
