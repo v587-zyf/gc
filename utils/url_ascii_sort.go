@@ -35,7 +35,7 @@ func UrlParamCheckExist(urlQuery url.Values, check []string) (bool, string) {
 	return true, ""
 }
 
-func UrlParamSort(urlQuery url.Values, check []string, filter ...string) (string, error) {
+func UrlParamSort(urlQuery url.Values, check []string, noEmpty bool, filter ...string) (string, error) {
 	if len(check) > 0 {
 		if res, c := UrlParamCheckExist(urlQuery, check); !res {
 			return "", errors.New(fmt.Sprintf("%s is empty", c))
@@ -45,6 +45,9 @@ func UrlParamSort(urlQuery url.Values, check []string, filter ...string) (string
 	var params []UrlParam
 	for k, vs := range urlQuery {
 		if len(filter) > 0 && InCollection(k, filter) {
+			continue
+		}
+		if noEmpty && vs[0] == "" {
 			continue
 		}
 		params = append(params, UrlParam{Key: k, Value: vs[0]})

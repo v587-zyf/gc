@@ -22,7 +22,7 @@ func TgCheck(initData, loginToken string) (tgDate url.Values, res bool) {
 		log.Error("utils.TgParseData", zap.Error(err), zap.String("initData", initData))
 		return
 	}
-	dataCheckString, err := UrlParamSort(tgDate, nil, "hash")
+	dataCheckString, err := UrlParamSort(tgDate, nil, false, "hash")
 	if err != nil {
 		log.Error("Tg Data error", zap.Error(err))
 		return
