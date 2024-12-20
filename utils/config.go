@@ -34,13 +34,13 @@ func LoadConf(fileName string, rawVal interface{}) error {
 	return nil
 }
 
-func Load(configVal interface{}, fileName ...string) error {
+func Load(configVal interface{}, path string, fileName ...string) error {
 	var configFileName string
 	if len(fileName) > 0 {
 		configFileName = fileName[0]
 	}
 	if configFileName == "" {
-		configFileName = getDefaultFileName()
+		configFileName = getDefaultFileName(path)
 	}
 
 	// load from config file
@@ -107,8 +107,11 @@ func Load(configVal interface{}, fileName ...string) error {
 	return nil
 }
 
-func getDefaultFileName() string {
+func getDefaultFileName(path ...string) string {
 	configFileName := "./conf/config.yml"
+	if len(path) > 0 && path[0] != "" {
+		configFileName = path[0]
+	}
 	mode := os.Getenv("MODE")
 	if mode != "" {
 		idx := strings.LastIndex(configFileName, ".")

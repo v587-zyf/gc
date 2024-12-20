@@ -47,7 +47,8 @@ func UrlParamSort(urlQuery url.Values, check []string, noEmpty bool, filter ...s
 		if len(filter) > 0 && InCollection(k, filter) {
 			continue
 		}
-		if noEmpty && vs[0] == "" {
+		//fmt.Println(k, vs[0])
+		if noEmpty && (vs[0] == "" || vs[0] == "0" || vs[0] == "omitempty") {
 			continue
 		}
 		params = append(params, UrlParam{Key: k, Value: vs[0]})
