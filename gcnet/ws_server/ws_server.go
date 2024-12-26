@@ -92,6 +92,7 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 	wsConn, err := s.upGrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error("webSocket upgrade err:", zap.Error(err))
+		return
 	}
 
 	ss := ws_session.NewSession(context.Background(), wsConn)

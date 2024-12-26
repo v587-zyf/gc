@@ -26,8 +26,8 @@ type Session struct {
 	method iface.IWsSessionMethod
 
 	outChan chan []byte
+	isClose bool
 
-	once          sync.Once
 	heartbeatTime time.Time
 }
 
@@ -80,7 +80,9 @@ func (s *Session) SetID(id uint64) {
 }
 
 func (s *Session) Close() error {
-	s.once.Do(func() {
+	if !s.isClose {
+		s.isClose = true
+
 		s.hooks.ExecuteStop(s)
 
 		close(s.outChan)
@@ -89,7 +91,7 @@ func (s *Session) Close() error {
 		s.conn.Close()
 
 		sessionMgr.unRegisterCh <- s
-	})
+	}
 
 	return nil
 }

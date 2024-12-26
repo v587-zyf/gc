@@ -140,6 +140,14 @@ func (s *SessionMgr) OnlineRange(fn func(userID uint64, ss iface.IWsSession)) {
 	return
 }
 
+func (s *SessionMgr) IsOnline(UID uint64) (ss iface.IWsSession, ok bool) {
+	s.onlineLock.RLock()
+	defer s.onlineLock.RUnlock()
+
+	ss, ok = s.online[UID]
+	return
+}
+
 func (s *SessionMgr) Login(ss iface.IWsSession) {
 	if s.IsConn(ss) {
 		s.OnlineAdd(ss.GetID(), ss)
