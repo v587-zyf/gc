@@ -123,6 +123,9 @@ func (s *Session) IsHeartbeatTimeout(now time.Time) bool {
 }
 
 func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
+	if s.isClose {
+		return nil
+	}
 	sendBytes, err := fn(args...)
 	if err != nil {
 		return err
