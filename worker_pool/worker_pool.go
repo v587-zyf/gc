@@ -183,7 +183,7 @@ func (p *WorkerPool) clean(scratch *[]*worker) {
 		tmp[i].task <- nil
 		tmp[i] = nil
 	}
-	log.Info("tmp clean", zap.Int("len", len(tmp)))
+	//log.Info("tmp clean", zap.Int("len", len(tmp)))
 }
 
 func (p *WorkerPool) getWorker() *worker {

@@ -2,8 +2,8 @@ package iface
 
 import (
 	"context"
-	"github.com/gorilla/websocket"
 	"net"
+	"time"
 )
 
 type ITcpSession interface {
@@ -34,13 +34,15 @@ type IWsSession interface {
 	Start()
 	Close() error
 
-	GetConn() *websocket.Conn
+	GetConn() IConn
 	GetCtx() context.Context
 
 	SendMsg(fn func(args ...any) ([]byte, error), args ...any) error
 
 	DoSomething(fn func(args ...any) bool) bool
 	CheckSomething(fn func(args ...any) bool) bool
+
+	IsHeartbeatTimeout(now time.Time) bool
 }
 
 type ITcpSessionMethod interface {

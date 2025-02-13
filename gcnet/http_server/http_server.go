@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/v587-zyf/gc/log"
 	"sync"
 
@@ -32,14 +31,16 @@ func NewHttpServer() *HttpServer {
 		JSONEncoder: json.Marshal,
 		JSONDecoder: json.Unmarshal,
 
+		//DisableKeepalive:      true,
 		DisableStartupMessage: true,
-		// Prefork:               true,
-		// ErrorHandler: config.ErrorHandler,
+		//Prefork:               true,
+		//ErrorHandler:          config.ErrorHandler,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			// nothing to do
 			return nil
 		},
 	})
+	app.Server().KeepHijackedConns = true
 
 	s := &HttpServer{
 		options: NewHttpOption(),
@@ -58,14 +59,14 @@ func (s *HttpServer) Init(ctx context.Context, opts ...any) (err error) {
 		}
 	}
 
-	if s.options.allowOrigins != "" {
-		s.app.Use(cors.New(cors.Config{
-			AllowOrigins:     s.options.allowOrigins,              // 只允许来自这些特定源的请求
-			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",       // 允许的 HTTP 方法
-			AllowHeaders:     "Authorization,Content-Type,Accept", // 只允许这些特定的头部
-			AllowCredentials: true,                                // 允许发送 cookies 和其他凭据
-		}))
-	}
+	//if s.options.allowOrigins != "" {
+	//	s.app.Use(cors.New(cors.Config{
+	//		AllowOrigins:     s.options.allowOrigins,              // 只允许来自这些特定源的请求
+	//		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",       // 允许的 HTTP 方法
+	//		AllowHeaders:     "Authorization,Content-Type,Accept", // 只允许这些特定的头部
+	//		AllowCredentials: true,                                // 允许发送 cookies 和其他凭据
+	//	}))
+	//}
 
 	if s.options.isHttps {
 		err = s.InitHttps()

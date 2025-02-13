@@ -1,4 +1,4 @@
-package ws_session
+package ws_conn
 
 import (
 	"context"
@@ -15,26 +15,27 @@ import (
 	"time"
 )
 
-type Session struct {
+type Conn struct {
 	id   uint64
-	conn *websocket.Conn
+	conn iface.IConn
 
 	ctx    context.Context
 	cancel context.CancelFunc
 
 	hooks *Hooks
 	cache sync.Map
-	//method iface.IWsSessionMethod
+	//method iface.IWsConnMethod
 
 	outChan chan []byte
 	isClose bool
+	mu      sync.RWMutex
 
 	heartbeatTime time.Time
 }
 
-func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
+func NewConn(ctx context.Context, conn iface.IConn) *Conn {
 	ctx, cancel := context.WithCancel(ctx)
-	s := &Session{
+	s := &Conn{
 		ctx:    ctx,
 		cancel: cancel,
 
@@ -49,38 +50,42 @@ func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 	return s
 }
 
-func (s *Session) Start() {
+func (s *Conn) Start() {
 	s.hooks.ExecuteStart(s)
 
 	go s.readPump()
 	go s.IOPump()
 }
 
-func (s *Session) Hooks() *Hooks {
+func (s *Conn) Hooks() *Hooks {
 	return s.hooks
 }
 
-func (s *Session) Set(key string, value any) {
+func (s *Conn) Set(key string, value any) {
 	s.cache.Store(key, value)
 }
-func (s *Session) Get(key string) (any, bool) {
+func (s *Conn) Get(key string) (any, bool) {
 	return s.cache.Load(key)
 }
-func (s *Session) Remove(key string) {
+func (s *Conn) Remove(key string) {
 	s.cache.Delete(key)
 }
 
-func (s *Session) GetID() uint64 {
+func (s *Conn) GetID() uint64 {
 	return s.id
 }
-func (s *Session) SetID(id uint64) {
+func (s *Conn) SetID(id uint64) {
 	if id <= 0 {
 		id = 0
 	}
 	s.id = id
 }
 
-func (s *Session) Close() error {
+func (s *Conn) Close() error {
+	//fmt.Println("close-----------")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if !s.isClose {
 		s.isClose = true
 
@@ -97,33 +102,42 @@ func (s *Session) Close() error {
 	return nil
 }
 
-func (s *Session) GetConn() iface.IConn {
+func (s *Conn) GetConn() iface.IConn {
 	return s.conn
 }
 
-func (s *Session) GetCtx() context.Context {
+func (s *Conn) GetCtx() context.Context {
 	return s.ctx
 }
 
-func (s *Session) Login() {
+func (s *Conn) Login() {
 	ws_session_mgr.GetSessionMgr().LoginCh <- s
 }
 
-func (s *Session) DoSomething(fn func(args ...any) bool) bool {
+func (s *Conn) DoSomething(fn func(args ...any) bool) bool {
 	return fn()
 }
-func (s *Session) CheckSomething(fn func(args ...any) bool) bool {
+func (s *Conn) CheckSomething(fn func(args ...any) bool) bool {
 	return fn()
 }
-func (s *Session) Heartbeat() {
+func (s *Conn) Heartbeat() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.heartbeatTime = time.Now()
 }
 
-func (s *Session) IsHeartbeatTimeout(now time.Time) bool {
-	return now.After(s.heartbeatTime.Add(enums.HEARTBEAT_TIMEOUT))
+func (s *Conn) IsHeartbeatTimeout(now time.Time) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return time.Now().After(s.heartbeatTime.Add(enums.HEARTBEAT_TIMEOUT))
 }
 
-func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
+func (s *Conn) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if s.isClose {
 		return nil
 	}
@@ -145,7 +159,7 @@ func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) err
 	return errcode.ERR_NET_SEND_TIMEOUT
 }
 
-func (s *Session) readPump() {
+func (s *Conn) readPump() {
 LOOP:
 	for {
 		_, message, err := s.conn.ReadMessage()
@@ -192,7 +206,7 @@ func ensureCapacity(slice []byte, size int) []byte {
 	return newSlice
 }
 
-func (s *Session) IOPump() {
+func (s *Conn) IOPump() {
 	var (
 		err     error
 		backoff time.Duration
@@ -213,6 +227,17 @@ LOOP:
 				break LOOP
 			}
 		case <-s.ctx.Done():
+			for len(s.outChan) > 0 {
+				select {
+				case data := <-s.outChan:
+					if err = s.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+						break LOOP
+					}
+				case <-time.After(time.Second):
+					log.Warn("timeout waiting for messages to send")
+					break LOOP
+				}
+			}
 			break LOOP
 		}
 	}

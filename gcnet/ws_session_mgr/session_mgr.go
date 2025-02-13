@@ -1,4 +1,4 @@
-package ws_session
+package ws_session_mgr
 
 import (
 	"github.com/v587-zyf/gc/iface"
@@ -20,8 +20,8 @@ type SessionMgr struct {
 	onlineLock sync.RWMutex
 
 	RegisterCh   chan iface.IWsSession
-	loginCh      chan iface.IWsSession
-	unRegisterCh chan iface.IWsSession
+	LoginCh      chan iface.IWsSession
+	UnRegisterCh chan iface.IWsSession
 }
 
 func GetSessionMgr() *SessionMgr {
@@ -34,8 +34,8 @@ func NewSessionMgr() *SessionMgr {
 		online:  make(map[uint64]iface.IWsSession),
 
 		RegisterCh:   make(chan iface.IWsSession, 1024),
-		loginCh:      make(chan iface.IWsSession, 1024),
-		unRegisterCh: make(chan iface.IWsSession, 1024),
+		LoginCh:      make(chan iface.IWsSession, 1024),
+		UnRegisterCh: make(chan iface.IWsSession, 1024),
 	}
 
 	return s
@@ -166,9 +166,9 @@ func (s *SessionMgr) Start() {
 		select {
 		case ss := <-s.RegisterCh:
 			s.AllAdd(ss)
-		case ss := <-s.loginCh:
+		case ss := <-s.LoginCh:
 			s.Login(ss)
-		case ss := <-s.unRegisterCh:
+		case ss := <-s.UnRegisterCh:
 			s.Disconnect(ss)
 		}
 	}
@@ -180,7 +180,7 @@ func (s *SessionMgr) ClearTimeout() {
 	allClients := s.GetAll()
 	for session := range allClients {
 		var fn = func(args ...any) bool {
-			return session.(*Session).IsHeartbeatTimeout(currentTime)
+			return session.IsHeartbeatTimeout(currentTime)
 		}
 		if session.CheckSomething(fn) {
 			session.Close()

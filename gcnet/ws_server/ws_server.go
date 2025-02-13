@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/v587-zyf/gc/gcnet/ws_session"
+	"github.com/v587-zyf/gc/gcnet/ws_session_mgr"
 	"github.com/v587-zyf/gc/log"
 	"github.com/v587-zyf/gc/telegram/go_tg_bot"
 	"github.com/v587-zyf/gc/utils"
@@ -52,7 +53,7 @@ func (s *WsServer) Init(ctx context.Context, option ...Option) (err error) {
 }
 
 func (s *WsServer) Start() {
-	go ws_session.GetSessionMgr().Start()
+	go ws_session_mgr.GetSessionMgr().Start()
 
 	var err error
 
@@ -97,7 +98,7 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 
 	ss := ws_session.NewSession(context.Background(), wsConn)
 	ss.Hooks().OnMethod(s.options.method)
-	ws_session.GetSessionMgr().RegisterCh <- ss
+	ws_session_mgr.GetSessionMgr().RegisterCh <- ss
 	ss.Start()
 
 	ip, err := utils.GetHttpIP(r)

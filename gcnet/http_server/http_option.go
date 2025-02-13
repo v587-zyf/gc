@@ -7,7 +7,7 @@ type HttpOption struct {
 	pem     string
 	key     string
 
-	allowOrigins string
+	//allowOrigins []string
 }
 
 type Option func(opts *HttpOption)
@@ -39,8 +39,9 @@ func WithKey(key string) Option {
 		opts.key = key
 	}
 }
-func WithAllOrigins(allowOrigins string) Option {
-	return func(opts *HttpOption) {
-		opts.allowOrigins = allowOrigins
-	}
-}
+
+//func WithAllOrigins(allowOrigins string) Option {
+//	return func(opts *HttpOption) {
+//		opts.allowOrigins = allowOrigins
+//	}
+//}

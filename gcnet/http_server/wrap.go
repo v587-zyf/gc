@@ -62,7 +62,7 @@ func SendResponse(c *fiber.Ctx, data any) error {
 	return nil
 }
 
-func NewResponseHandlerFn(fn ResponseHandlerFn) func(c *fiber.Ctx) error {
+func NewResponseHandlerFn(fn ResponseHandlerFn) fiber.Handler {
 	return func(c *fiber.Ctx) (retErr error) {
 		defer func() {
 			if r := recover(); r != nil {
