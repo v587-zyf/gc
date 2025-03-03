@@ -34,6 +34,7 @@ func (r *RedisCluster) Init(ctx context.Context, opts ...any) (err error) {
 		}
 	}
 	r.client = redis.NewClusterClient(&redis.ClusterOptions{
+		Username:        r.options.username,
 		Addrs:           r.options.addrs,  // 集群地址
 		PoolSize:        3000,             // Redis连接池大小
 		MaxRetries:      10,               // 最大重试次数

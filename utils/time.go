@@ -8,8 +8,14 @@ import (
 var Time1970 = time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local)
 
 func GetNowUTC() time.Time {
-	loc, _ := time.LoadLocation("UTC")
-	return time.Now().In(loc)
+	return time.Now().UTC()
+}
+
+// GetYesterdayUTC
+func GetYesterdayUTC() time.Time {
+	now := time.Now().UTC()
+	yesterday := now.AddDate(0, 0, -1)
+	return yesterday
 }
 
 // 20240625

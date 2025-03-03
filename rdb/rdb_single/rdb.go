@@ -36,6 +36,7 @@ func (r *RedisSingle) Init(ctx context.Context, opts ...any) (err error) {
 
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.options.addr,
+		Username: r.options.username,
 		Password: r.options.pwd,
 		DB:       0,
 		PoolSize: 300,
