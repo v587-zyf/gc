@@ -2,6 +2,7 @@ package worker_pool
 
 import (
 	"context"
+	"github.com/v587-zyf/gc/gcnet/tcp_session"
 	"github.com/v587-zyf/gc/gcnet/ws_session"
 	"github.com/v587-zyf/gc/iface"
 	"time"
@@ -28,6 +29,9 @@ func Assign(task iface.ITask) error {
 
 func AssignWsTask(fn ws_session.Recv, ss iface.IWsSession, data any) error {
 	return defaultWorkPoll.AssignWsTask(fn, ss, data)
+}
+func AssignTcpTask(fn tcp_session.Recv, ss iface.ITcpSession, data any) error {
+	return defaultWorkPoll.AssignTcpTask(fn, ss, data)
 }
 func AssignDelayTask(delay time.Duration, fn ws_session.Recv, ss iface.IWsSession, data any) error {
 	return defaultWorkPoll.AssignDelaySendTask(delay, fn, ss, data)

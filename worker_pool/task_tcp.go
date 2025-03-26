@@ -1,10 +1,11 @@
 package worker_pool
 
 import (
+	"github.com/v587-zyf/gc/gcnet/tcp_session"
 	"github.com/v587-zyf/gc/iface"
 )
 
-func (p *WorkerPool) AssignNetTask(fn tcp_session.Recv, ss iface.ITcpSession, data any) error {
+func (p *WorkerPool) AssignTcpTask(fn tcp_session.Recv, ss iface.ITcpSession, data any) error {
 	return Assign(&TcpTask{
 		Func:    fn,
 		Session: ss,
