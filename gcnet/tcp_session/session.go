@@ -1,4 +1,4 @@
-package tpc_session
+package tcp_session
 
 import (
 	"bufio"

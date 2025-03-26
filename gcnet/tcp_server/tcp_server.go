@@ -2,7 +2,6 @@ package tcp_server
 
 import (
 	"context"
-	"github.com/v587-zyf/gc/gcnet/tpc_session"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"net"
@@ -58,7 +57,7 @@ func (s *TcpServer) Start() {
 				log.Error("tcp listen err", zap.Error(err))
 				break LOOP
 			}
-			ss := tpc_session.NewSession(context.Background(), c)
+			ss := tcp_session.NewSession(context.Background(), c)
 			ss.Hooks().OnMethod(s.options.method)
 			ss.Start()
 		}
