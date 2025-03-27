@@ -20,7 +20,7 @@ type ITcpSession interface {
 	GetConn() net.Conn
 	GetCtx() context.Context
 
-	Send(msgID uint16, tag uint32, userID uint64, msg IProtoMessage) error
+	SendMsg(fn func(args ...any) ([]byte, error), args ...any) error
 }
 
 type IWsSession interface {
