@@ -20,5 +20,13 @@ type TcpTask struct {
 }
 
 func (t *TcpTask) Do() {
+	if t.Func == nil {
+		//log.Warn("ws task func is nil", zap.Uint16("msgID", t.Data.(*iface.MessageFrame).MsgID), zap.String("msgName", pb.GetMsgName(t.Data.(*iface.MessageFrame).MsgID)))
+		//log.Warn("ws task func is nil", zap.Uint16("msgID", t.Data.(*iface.MessageFrame).MsgID))
+		if defaultWorkPoll.options.errHandler != nil {
+			defaultWorkPoll.options.errHandler(t.Data)
+		}
+		return
+	}
 	t.Func(t.Session, t.Data)
 }

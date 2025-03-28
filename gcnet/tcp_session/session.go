@@ -1,15 +1,14 @@
 package tcp_session
 
 import (
-	"bufio"
 	"context"
 	"encoding/binary"
-	"errors"
 	"github.com/v587-zyf/gc/enums"
 	"github.com/v587-zyf/gc/errcode"
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
+	"io"
 	"net"
 	"runtime"
 	"sync"
@@ -142,22 +141,52 @@ func (s *Session) readPump() {
 
 	s.hooks.ExecuteStart(s)
 
-	scanner := bufio.NewScanner(s.conn)
-	scanner.Buffer(make([]byte, enums.READ_BUFF_SIZE_INIT), enums.READ_BUFF_SIZE_MAX)
-	scanner.Split(s.split)
+	//	scanner := bufio.NewScanner(s.conn)
+	//	scanner.Buffer(make([]byte, enums.READ_BUFF_SIZE_INIT), enums.READ_BUFF_SIZE_MAX)
+	//	scanner.Split(s.split)
+	//LOOP:
+	//	for {
+	//		ok := scanner.Scan()
+	//		if !ok {
+	//			if err := scanner.Err(); err != nil {
+	//				log.Error("server read err", zap.Error(err))
+	//			}
+	//			break LOOP
+	//		}
+	//
+	//		data := scanner.Bytes()
+	//		if len(data) > 0 {
+	//			dataCopy := make([]byte, len(data))
+	//			copy(dataCopy, data)
+	//			select {
+	//			case s.inChan <- dataCopy:
+	//			default:
+	//				log.Warn("inChan is full, dropping message", zap.Uint64("sessID", s.GetID()))
+	//			}
+	//		}
+	//	}
+
+	buffer := make([]byte, enums.READ_BUFF_SIZE_INIT)
 LOOP:
 	for {
-		ok := scanner.Scan()
-		if !ok {
-			//log.Error("server read err", zap.Error(scanner.Err()))
+		n, err := s.conn.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				break LOOP
+			}
+			//log.Error("server read err", zap.Error(err))
 			break LOOP
 		}
 
-		data := scanner.Bytes()
-		if data != nil {
+		data := buffer[:n]
+		if len(data) > 0 {
 			dataCopy := make([]byte, len(data))
 			copy(dataCopy, data)
-			s.inChan <- dataCopy
+			select {
+			case s.inChan <- dataCopy:
+			default:
+				log.Warn("inChan is full, dropping message", zap.Uint64("sessID", s.GetID()))
+			}
 		}
 	}
 
@@ -186,7 +215,9 @@ LOOP:
 	for {
 		select {
 		case data := <-s.inChan:
-			s.hooks.ExecuteRecv(s, data)
+			go func(d []byte) {
+				s.hooks.ExecuteRecv(s, d)
+			}(data)
 		case <-s.ctx.Done():
 			break LOOP
 		}
@@ -245,14 +276,15 @@ func (s *Session) split(data []byte, atEOF bool) (advance int, token []byte, err
 	}
 
 	// body len
-	n := int(binary.BigEndian.Uint32(data[0:4]))
-	if n > enums.MSG_MAX_PACKET_SIZE-enums.MSG_HEADER_SIZE || n < 0 {
-		log.Error("body len invalid", zap.Uint64("sessID", s.id),
-			zap.Int("n", n), zap.String("addr", s.GetConn().RemoteAddr().String()))
-		return 0, nil, errors.New("body len invalid")
-	}
+	n := int(binary.LittleEndian.Uint32(data[0:4]))
+	//if n > enums.MSG_MAX_PACKET_SIZE-enums.MSG_HEADER_SIZE || n < 0 {
+	//	log.Error("body len invalid", zap.Uint64("sessID", s.id),
+	//		zap.Int("n", n), zap.String("addr", s.GetConn().RemoteAddr().String()))
+	//	return 0, nil, errors.New("body len invalid")
+	//}
 	if dataLen < n+enums.MSG_HEADER_SIZE {
 		return 0, nil, nil
 	}
-	return n + enums.MSG_HEADER_SIZE, data[0 : n+enums.MSG_HEADER_SIZE], nil
+
+	return n + enums.MSG_HEADER_SIZE, data[:n+enums.MSG_HEADER_SIZE], nil
 }
