@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/v587-zyf/gc/enums"
 	"io"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -210,4 +211,15 @@ func FnvString(s string) uint64 {
 		h ^= uint64(b)
 	}
 	return h
+}
+
+// float64ToUint64 converts a float64 to a uint64 safely
+func Float64ToUint64(f float64) uint64 {
+	if f < 0 {
+		return 0
+	}
+	if f > float64(^uint64(0)) {
+		return 0
+	}
+	return uint64(math.Floor(f))
 }
