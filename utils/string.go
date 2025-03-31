@@ -119,6 +119,15 @@ func StrToUInt64(src string) uint64 {
 	return uint64(data)
 }
 
+func StrToUInt32(src string) uint32 {
+	data, err := strconv.ParseInt(src, 10, 32)
+	if err != nil {
+		return 0
+	}
+
+	return uint32(data)
+}
+
 func StrToInt(src string) int {
 	data, err := strconv.Atoi(src)
 	if err != nil {
