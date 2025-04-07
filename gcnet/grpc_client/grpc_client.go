@@ -34,9 +34,10 @@ func (s *GrpcClient) Init(ctx context.Context, option ...any) (err error) {
 	}
 
 	credentials := grpc.WithTransportCredentials(insecure.NewCredentials())
-	//linkAddr := fmt.Sprintf("passthrough:%s", s.options.listenAddr)
-	linkAddr := fmt.Sprintf("%s", s.options.listenAddr)
+	linkAddr := fmt.Sprintf("passthrough:%s", s.options.listenAddr)
+	//linkAddr := fmt.Sprintf("%s", s.options.listenAddr)
 	s.client, err = grpc.NewClient(linkAddr, credentials)
+	//s.client, err = grpc.NewClient(linkAddr)
 	if err != nil {
 		log.Error("grpc dial err", zap.Error(err))
 		return
