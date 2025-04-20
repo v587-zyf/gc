@@ -1,4 +1,4 @@
-package tcp_session
+package tcp_session_mgr
 
 import (
 	"github.com/v587-zyf/gc/iface"

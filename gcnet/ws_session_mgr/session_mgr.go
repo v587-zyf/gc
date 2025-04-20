@@ -3,6 +3,7 @@ package ws_session_mgr
 import (
 	"github.com/v587-zyf/gc/iface"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -13,11 +14,11 @@ func init() {
 }
 
 type SessionMgr struct {
-	clients     map[iface.IWsSession]struct{}
-	clientsLock sync.RWMutex
+	allClients sync.Map // iface.IWsSession:struct{}
+	allClientN uint64
 
-	online     map[uint64]iface.IWsSession
-	onlineLock sync.RWMutex
+	onlineClients sync.Map // uint64:iface.IWsSession
+	onlineClientN uint64
 
 	RegisterCh   chan iface.IWsSession
 	LoginCh      chan iface.IWsSession
@@ -30,26 +31,20 @@ func GetSessionMgr() *SessionMgr {
 
 func NewSessionMgr() *SessionMgr {
 	s := &SessionMgr{
-		clients: make(map[iface.IWsSession]struct{}),
-		online:  make(map[uint64]iface.IWsSession),
-
-		RegisterCh:   make(chan iface.IWsSession, 1024),
-		LoginCh:      make(chan iface.IWsSession, 1024),
-		UnRegisterCh: make(chan iface.IWsSession, 1024),
+		RegisterCh:   make(chan iface.IWsSession, 512),
+		LoginCh:      make(chan iface.IWsSession, 512),
+		UnRegisterCh: make(chan iface.IWsSession, 512),
 	}
 
 	return s
 }
 
 func (s *SessionMgr) AllLength() int {
-	return len(s.clients)
+	return int(atomic.LoadUint64(&s.allClientN))
 }
 
 func (s *SessionMgr) IsConn(ss iface.IWsSession) (ok bool) {
-	s.clientsLock.RLock()
-	defer s.clientsLock.RUnlock()
-
-	_, ok = s.clients[ss]
+	_, ok = s.allClients.Load(ss)
 
 	return
 }
@@ -66,55 +61,43 @@ func (s *SessionMgr) GetAll() (allSS map[iface.IWsSession]struct{}) {
 }
 
 func (s *SessionMgr) AllRange(fn func(ss iface.IWsSession) (result bool)) {
-	s.clientsLock.RLock()
-	defer s.clientsLock.RUnlock()
-
-	for k := range s.clients {
-		result := fn(k)
+	s.allClients.Range(func(key, value any) bool {
+		ss := value.(iface.IWsSession)
+		result := fn(ss)
 		if !result {
-			return
+			return false
 		}
-	}
+		return true
+	})
 }
 
 func (s *SessionMgr) AllAdd(ss iface.IWsSession) {
-	s.clientsLock.Lock()
-	defer s.clientsLock.Unlock()
-
-	s.clients[ss] = struct{}{}
+	s.allClients.Store(ss, struct{}{})
+	atomic.AddUint64(&s.allClientN, 1)
 }
 
 func (s *SessionMgr) AllDel(ss iface.IWsSession) {
-	s.clientsLock.Lock()
-	defer s.clientsLock.Unlock()
-
-	delete(s.clients, ss)
+	s.allClients.Delete(ss)
+	atomic.AddUint64(&s.allClientN, -1)
 }
 
 func (s *SessionMgr) OnlineLen() int {
-	return len(s.online)
+	return int(atomic.LoadUint64(&s.onlineClientN))
 }
 
 func (s *SessionMgr) OnlineAdd(userID uint64, ss iface.IWsSession) {
-	s.onlineLock.Lock()
-	defer s.onlineLock.Unlock()
-
-	s.online[userID] = ss
+	s.onlineClients.Store(userID, ss)
+	atomic.AddUint64(&s.onlineClientN, 1)
 }
 
 func (s *SessionMgr) OnlineDel(userID uint64) {
-	s.onlineLock.Lock()
-	defer s.onlineLock.Unlock()
-
-	delete(s.online, userID)
+	s.onlineClients.Delete(userID)
+	atomic.AddUint64(&s.onlineClientN, -1)
 }
 
 func (s *SessionMgr) OnlineGetOne(userID uint64) (ss iface.IWsSession) {
-	s.onlineLock.RLock()
-	defer s.onlineLock.RUnlock()
-
-	if v, ok := s.online[userID]; ok {
-		ss = v
+	if v, ok := s.onlineClients.Load(userID); ok {
+		ss = v.(iface.IWsSession)
 	}
 
 	return
@@ -130,21 +113,21 @@ func (s *SessionMgr) OnlineOnce(userID uint64, fn func(ss iface.IWsSession)) {
 }
 
 func (s *SessionMgr) OnlineRange(fn func(userID uint64, ss iface.IWsSession)) {
-	s.onlineLock.RLock()
-	defer s.onlineLock.RUnlock()
-
-	for userID, ss := range s.online {
+	s.onlineClients.Range(func(key, value any) bool {
+		userID := key.(uint64)
+		ss := value.(iface.IWsSession)
 		fn(userID, ss)
-	}
+		return true
+	})
 
 	return
 }
 
-func (s *SessionMgr) IsOnline(UID uint64) (ss iface.IWsSession, ok bool) {
-	s.onlineLock.RLock()
-	defer s.onlineLock.RUnlock()
-
-	ss, ok = s.online[UID]
+func (s *SessionMgr) IsOnline(userID uint64) (ss iface.IWsSession, ok bool) {
+	if val, ok := s.onlineClients.Load(userID); ok {
+		ss = val.(iface.IWsSession)
+		return ss, true
+	}
 	return
 }
 
