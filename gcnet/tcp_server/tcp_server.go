@@ -2,6 +2,7 @@ package tcp_server
 
 import (
 	"context"
+	"github.com/v587-zyf/gc/gcnet/tcp_session"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"net"
@@ -27,11 +28,11 @@ func NewTcpServer() *TcpServer {
 	return s
 }
 
-func (s *TcpServer) Init(ctx context.Context, option ...any) (err error) {
+func (s *TcpServer) Init(ctx context.Context, option ...Option) (err error) {
 	s.ctx, s.cancel = context.WithCancel(ctx)
 
 	for _, opt := range option {
-		opt.(Option)(s.options)
+		opt(s.options)
 	}
 
 	s.listener, err = net.Listen("tcp", s.options.listenAddr)
@@ -62,7 +63,7 @@ func (s *TcpServer) Start() {
 			ss.Start()
 		}
 
-		log.Debug("server end", zap.String("addr", s.options.listenAddr))
+		//log.Debug("server end", zap.String("addr", s.options.listenAddr))
 	}(s)
 
 	s.Wait()

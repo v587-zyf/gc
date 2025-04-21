@@ -15,10 +15,10 @@ func init() {
 
 type SessionMgr struct {
 	allClients sync.Map // iface.IWsSession:struct{}
-	allClientN uint64
+	allClientN int64
 
 	onlineClients sync.Map // uint64:iface.IWsSession
-	onlineClientN uint64
+	onlineClientN int64
 
 	RegisterCh   chan iface.IWsSession
 	LoginCh      chan iface.IWsSession
@@ -40,7 +40,7 @@ func NewSessionMgr() *SessionMgr {
 }
 
 func (s *SessionMgr) AllLength() int {
-	return int(atomic.LoadUint64(&s.allClientN))
+	return int(atomic.LoadInt64(&s.allClientN))
 }
 
 func (s *SessionMgr) IsConn(ss iface.IWsSession) (ok bool) {
@@ -73,26 +73,26 @@ func (s *SessionMgr) AllRange(fn func(ss iface.IWsSession) (result bool)) {
 
 func (s *SessionMgr) AllAdd(ss iface.IWsSession) {
 	s.allClients.Store(ss, struct{}{})
-	atomic.AddUint64(&s.allClientN, 1)
+	atomic.AddInt64(&s.allClientN, 1)
 }
 
 func (s *SessionMgr) AllDel(ss iface.IWsSession) {
 	s.allClients.Delete(ss)
-	atomic.AddUint64(&s.allClientN, -1)
+	atomic.AddInt64(&s.allClientN, -1)
 }
 
 func (s *SessionMgr) OnlineLen() int {
-	return int(atomic.LoadUint64(&s.onlineClientN))
+	return int(atomic.LoadInt64(&s.onlineClientN))
 }
 
 func (s *SessionMgr) OnlineAdd(userID uint64, ss iface.IWsSession) {
 	s.onlineClients.Store(userID, ss)
-	atomic.AddUint64(&s.onlineClientN, 1)
+	atomic.AddInt64(&s.onlineClientN, 1)
 }
 
 func (s *SessionMgr) OnlineDel(userID uint64) {
 	s.onlineClients.Delete(userID)
-	atomic.AddUint64(&s.onlineClientN, -1)
+	atomic.AddInt64(&s.onlineClientN, -1)
 }
 
 func (s *SessionMgr) OnlineGetOne(userID uint64) (ss iface.IWsSession) {

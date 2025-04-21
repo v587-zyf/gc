@@ -21,6 +21,11 @@ type ITcpSession interface {
 	GetCtx() context.Context
 
 	SendMsg(fn func(args ...any) ([]byte, error), args ...any) error
+
+	DoSomething(fn func(args ...any) bool) bool
+	CheckSomething(fn func(args ...any) bool) bool
+
+	IsHeartbeatTimeout(now time.Time) bool
 }
 
 type IWsSession interface {
@@ -46,6 +51,7 @@ type IWsSession interface {
 }
 
 type ITcpSessionMethod interface {
+	Name() string
 	Start(ss ITcpSession)
 	Recv(conn ITcpSession, data any)
 	Stop(ss ITcpSession)

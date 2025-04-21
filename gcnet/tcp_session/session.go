@@ -3,12 +3,14 @@ package tcp_session
 import (
 	"context"
 	"encoding/binary"
+	"github.com/v587-zyf/gc/buffer_pool"
 	"github.com/v587-zyf/gc/enums"
 	"github.com/v587-zyf/gc/errcode"
-	"github.com/v587-zyf/gc/iface"
+	"github.com/v587-zyf/gc/gcnet/tcp_session_mgr"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"io"
+	"math"
 	"net"
 	"runtime"
 	"sync"
@@ -22,14 +24,13 @@ type Session struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	hooks  *Hooks
-	cache  sync.Map
-	method iface.ITcpSessionMethod
+	hooks *Hooks
+	cache sync.Map
 
-	inChan  chan []byte
 	outChan chan []byte
+	isClose bool
 
-	once sync.Once
+	heartbeatTime time.Time
 }
 
 func NewSession(ctx context.Context, conn net.Conn) *Session {
@@ -38,10 +39,11 @@ func NewSession(ctx context.Context, conn net.Conn) *Session {
 		ctx:    ctx,
 		cancel: cancel,
 
-		inChan:  make(chan []byte, 1024),
 		outChan: make(chan []byte, 1024),
 
 		hooks: NewHooks(),
+
+		heartbeatTime: time.Now(),
 	}
 	s.conn = conn
 
@@ -49,17 +51,10 @@ func NewSession(ctx context.Context, conn net.Conn) *Session {
 }
 
 func (s *Session) Start() {
-	go func() {
-		s.readPump()
-	}()
+	s.hooks.ExecuteStart(s)
 
-	go func() {
-		s.parsePump()
-	}()
-
-	go func() {
-		s.writePump()
-	}()
+	go s.readPump()
+	go s.IOPump()
 }
 
 func (s *Session) Hooks() *Hooks {
@@ -91,10 +86,18 @@ func (s *Session) SetID(id uint64) {
 }
 
 func (s *Session) Close() error {
-	s.once.Do(func() {
+	if !s.isClose {
+		s.isClose = true
+
+		s.hooks.ExecuteStop(s)
+
+		close(s.outChan)
+
 		s.cancel()
 		s.conn.Close()
-	})
+
+		tcp_session_mgr.GetSessionMgr().UnRegisterCh <- s
+	}
 
 	return nil
 }
@@ -105,6 +108,24 @@ func (s *Session) GetConn() net.Conn {
 
 func (s *Session) GetCtx() context.Context {
 	return s.ctx
+}
+
+func (s *Session) Login() {
+	tcp_session_mgr.GetSessionMgr().LoginCh <- s
+}
+
+func (s *Session) DoSomething(fn func(args ...any) bool) bool {
+	return fn()
+}
+func (s *Session) CheckSomething(fn func(args ...any) bool) bool {
+	return fn()
+}
+func (s *Session) Heartbeat() {
+	s.heartbeatTime = time.Now()
+}
+
+func (s *Session) IsHeartbeatTimeout(now time.Time) bool {
+	return now.After(s.heartbeatTime.Add(enums.HEARTBEAT_TIMEOUT))
 }
 
 func (s *Session) SendMsg(fn func(args ...any) ([]byte, error), args ...any) error {
@@ -180,48 +201,32 @@ LOOP:
 
 		data := buffer[:n]
 		if len(data) > 0 {
-			dataCopy := make([]byte, len(data))
-			copy(dataCopy, data)
-			select {
-			case s.inChan <- dataCopy:
-			default:
-				log.Warn("inChan is full, dropping message", zap.Uint64("sessID", s.GetID()))
+			buf := buffer_pool.GetBuffer()
+			if buf == nil {
+				log.Error("buffer_pool get err")
+				break LOOP
 			}
+
+			buf.Data = ensureCapacity(buf.Data, len(data))
+			copy(buf.Data, data)
+
+			s.hooks.ExecuteRecv(s, buf.Data)
+			buffer_pool.Put(buf)
 		}
 	}
 
 	s.cancel()
 }
 
-func (s *Session) parsePump() {
-	defer func() {
-		if r := recover(); r != nil {
-			buf := make([]byte, 1<<10)
-			runtime.Stack(buf, true)
-			if err, ok := r.(error); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err.Error()), zap.ByteString("core", buf))
-			} else if err, ok := r.(string); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err), zap.ByteString("core", buf))
-			} else {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.Reflect("err", err), zap.ByteString("core", buf))
-			}
-		}
-	}()
-
-LOOP:
-	for {
-		select {
-		case data := <-s.inChan:
-			go func(d []byte) {
-				s.hooks.ExecuteRecv(s, d)
-			}(data)
-		case <-s.ctx.Done():
-			break LOOP
-		}
+func ensureCapacity(slice []byte, size int) []byte {
+	if cap(slice) >= size {
+		return slice[:size]
 	}
+	newSlice := make([]byte, size)
+	if len(slice) < size {
+		copy(newSlice, slice)
+	}
+	return newSlice
 }
 
 func (s *Session) writePump() {
@@ -264,6 +269,56 @@ LOOP:
 	s.cancel()
 
 	s.hooks.ExecuteStop(s)
+}
+
+func (s *Session) IOPump() {
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 1<<10)
+			runtime.Stack(buf, true)
+			if err, ok := r.(error); ok {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.String("err", err.Error()), zap.ByteString("core", buf))
+			} else if err, ok := r.(string); ok {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.String("err", err), zap.ByteString("core", buf))
+			} else {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.Reflect("err", err), zap.ByteString("core", buf))
+			}
+		}
+	}()
+
+	var (
+		err     error
+		backoff time.Duration
+	)
+
+LOOP:
+	for {
+		select {
+		case data := <-s.outChan:
+			for i := 0; i < 3; i++ {
+				//s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
+				if _, err = s.conn.Write(data); err == nil {
+					break
+				}
+				backoff = calculateBackoff(i)
+				time.Sleep(backoff)
+			}
+		case <-s.ctx.Done():
+			break LOOP
+		}
+	}
+
+	s.conn.Close()
+	s.cancel()
+
+	s.hooks.ExecuteStop(s)
+}
+
+func calculateBackoff(attempt int) time.Duration {
+	return time.Duration(100) * time.Millisecond * time.Duration(math.Min(math.Pow(2, float64(attempt)), float64(time.Second/time.Millisecond)))
 }
 
 func (s *Session) split(data []byte, atEOF bool) (advance int, token []byte, err error) {
