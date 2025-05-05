@@ -49,67 +49,66 @@ func Float64SliceFromString(str string, sep string) (Float64Slice, error) {
 	return result, nil
 }
 
-func (this IntSlice) Index(element int) int {
-	for i, v := range this {
+func (s IntSlice) Index(element int) int {
+	for i, v := range s {
 		if v == element {
 			return i
 		}
 	}
 	return -1
 }
-
-func (this IntSlice) RemoveIndex(index int) IntSlice {
-	if index < 0 || index >= len(this) {
-		return this
+func (s IntSlice) RemoveIndex(index int) IntSlice {
+	if index < 0 || index >= len(s) {
+		return s
 	}
-	return append(this[:index], this[index+1:]...)
+	return append(s[:index], s[index+1:]...)
 }
-
-func (this IntSlice) RemoveElement(element int) IntSlice {
-	for i, v := range this {
+func (s IntSlice) RemoveElement(element int) IntSlice {
+	for i, v := range s {
 		if v == element {
-			return append(this[:i], this[i+1:]...)
+			return append(s[:i], s[i+1:]...)
 		}
 	}
-	return this
+	return s
 }
-
-func (this IntSlice) Add(element int) IntSlice {
-	return append(this, element)
+func (s IntSlice) Add(element int) IntSlice {
+	return append(s, element)
 }
-
-func (this IntSlice) AddUnique(element int) IntSlice {
-	if this.Index(element) < 0 {
-		return this
+func (s IntSlice) AddUnique(element int) IntSlice {
+	if s.Index(element) < 0 {
+		return s
 	}
-	return append(this, element)
+	return append(s, element)
 }
-
-func (this IntSlice) String(sep string) string {
-	var arrStr = make([]string, len(this))
-	for i, v := range this {
+func (s IntSlice) String(sep string) string {
+	var arrStr = make([]string, len(s))
+	for i, v := range s {
 		arrStr[i] = strconv.Itoa(v)
 	}
 	return strings.Join(arrStr, sep)
 }
-
-func (this IntSlice) Len() int {
-	return len(this)
+func (s IntSlice) Len() int {
+	return len(s)
 }
-
-// 玩家按战力排名
-func (this IntSlice) Less(i, j int) bool {
-	if this[j] != this[i] {
-		return this[j] > this[i]
+func (s IntSlice) Less(i, j int) bool {
+	if s[j] != s[i] {
+		return s[j] > s[i]
 	}
 	return false
 }
-
-func (this IntSlice) Swap(i, j int) {
-	this[i], this[j] = this[j], this[i]
+func (s IntSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
 
 func ConvertInt32SliceToIntSlice(origin []int32) []int {
+	ret := make([]int, len(origin))
+	for i, v := range origin {
+		ret[i] = int(v)
+	}
+	return ret
+}
+
+func ConvertUInt32SliceToIntSlice(origin []uint32) []int {
 	ret := make([]int, len(origin))
 	for i, v := range origin {
 		ret[i] = int(v)
@@ -125,6 +124,14 @@ func ConvertIntSlice2Int32Slice(origin []int) []int32 {
 	return ret
 }
 
+func ConvertIntSlice2UInt32Slice(origin []int) []uint32 {
+	ret := make([]uint32, len(origin))
+	for i, v := range origin {
+		ret[i] = uint32(v)
+	}
+	return ret
+}
+
 func ConvertMapIntToInt32(origin map[int]int) map[int32]int32 {
 	ret := make(map[int32]int32, len(origin))
 	for i, v := range origin {
@@ -133,7 +140,23 @@ func ConvertMapIntToInt32(origin map[int]int) map[int32]int32 {
 	return ret
 }
 
+func ConvertMapIntToUInt32(origin map[int]int) map[uint32]uint32 {
+	ret := make(map[uint32]uint32, len(origin))
+	for i, v := range origin {
+		ret[uint32(i)] = uint32(v)
+	}
+	return ret
+}
+
 func ConvertMapInt32ToInt(origin map[int32]int32) map[int]int {
+	ret := make(map[int]int, len(origin))
+	for i, v := range origin {
+		ret[int(i)] = int(v)
+	}
+	return ret
+}
+
+func ConvertMapUInt32ToInt(origin map[uint32]uint32) map[int]int {
 	ret := make(map[int]int, len(origin))
 	for i, v := range origin {
 		ret[int(i)] = int(v)
@@ -153,10 +176,24 @@ func SliceIntUnique(origin []int) []int {
 	}
 	return ret
 }
-func SliceInt32Unique(origin []int32) []int32 {
+
+func SliceInt32Unique(arr []int32) []int32 {
 	ret := make([]int32, 0)
 	tempMap := make(map[int32]struct{})
-	for _, v := range origin {
+	for _, v := range arr {
+		if _, ok := tempMap[v]; ok {
+			continue
+		}
+		ret = append(ret, v)
+		tempMap[v] = struct{}{}
+	}
+	return ret
+}
+
+func SliceUInt32Unique(arr []uint32) []uint32 {
+	ret := make([]uint32, 0)
+	tempMap := make(map[uint32]struct{})
+	for _, v := range arr {
 		if _, ok := tempMap[v]; ok {
 			continue
 		}
@@ -168,7 +205,6 @@ func SliceInt32Unique(origin []int32) []int32 {
 
 // 2维int转string
 func SliceInt2ToString(arr [][]int, sep1 string, sep2 string) string {
-
 	slice1 := make([]string, len(arr))
 	for k, v := range arr {
 		slice1[k] = JoinIntSlice(v, sep1)
@@ -177,11 +213,10 @@ func SliceInt2ToString(arr [][]int, sep1 string, sep2 string) string {
 }
 
 // 2维int转1维string
-func SliceInt2ToSliceString1(arr [][]int, sep1 string) []string {
-
+func SliceInt2ToSliceString1(arr [][]int, sep string) []string {
 	slice1 := make([]string, len(arr))
 	for k, v := range arr {
-		slice1[k] = JoinIntSlice(v, sep1)
+		slice1[k] = JoinIntSlice(v, sep)
 	}
 	return slice1
 }
@@ -210,7 +245,20 @@ func JoinInt32Slice(a []int32, sep string) string {
 	return strings.Join(b, sep)
 }
 
-func InterfaceSlice2StringSlice(arr []interface{}) []string {
+func JoinUInt32Slice(a []uint32, sep string) string {
+	l := len(a)
+	if l == 0 {
+		return ""
+	}
+	b := make([]string, l)
+	for i, v := range a {
+		b[i] = strconv.Itoa(int(v))
+	}
+	return strings.Join(b, sep)
+}
+
+// anySlice2StringSlice 将anySlice转换为stringSlice
+func AnySlice2StringSlice(arr []any) []string {
 	strArr := make([]string, len(arr))
 	for index, v := range arr {
 		strArr[index] = fmt.Sprint(v)
@@ -218,14 +266,17 @@ func InterfaceSlice2StringSlice(arr []interface{}) []string {
 	return strArr
 }
 
+// IntMap2ToString 将IntMap转换为字符串
+// 1,2;3,4;
 func IntMap2ToString(arr IntMap) string {
-	slice1 := make([]string, 0)
+	slice1 := make([]string, 0, len(arr))
 	for k, v := range arr {
 		slice1 = append(slice1, fmt.Sprintf("%d,%d", k, v))
 	}
 	return strings.Join(slice1, ";")
 }
 
+// InCollection 判断字符串 elem 是否在字符串切片 elems 中
 // Checks if the given string elem is in the string slice elems.
 func InCollection(elem string, elems []string) bool {
 	for _, item := range elems {
