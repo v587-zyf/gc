@@ -55,7 +55,7 @@ func (s *TcpServer) Start() {
 		for {
 			c, err := s.listener.Accept()
 			if err != nil {
-				log.Error("tcp listen err", zap.Error(err))
+				//log.Error("tcp listen err", zap.Error(err))
 				break LOOP
 			}
 			ss := tcp_session.NewSession(context.Background(), c)
