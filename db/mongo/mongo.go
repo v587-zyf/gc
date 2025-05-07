@@ -39,6 +39,10 @@ func (m *Mongo) Init(ctx context.Context, opts ...any) (err error) {
 		m.db = m.client.Database(m.options.db)
 	}
 
+	if err = m.client.Ping(10); err != nil {
+		return err
+	}
+
 	return nil
 }
 func (m *Mongo) Get() *qmgo.Client {
