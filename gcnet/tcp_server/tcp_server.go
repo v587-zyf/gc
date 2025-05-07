@@ -3,6 +3,7 @@ package tcp_server
 import (
 	"context"
 	"github.com/v587-zyf/gc/gcnet/tcp_session"
+	"github.com/v587-zyf/gc/gcnet/tcp_session_mgr"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"net"
@@ -61,6 +62,8 @@ func (s *TcpServer) Start() {
 			ss := tcp_session.NewSession(context.Background(), c)
 			ss.Hooks().OnMethod(s.options.method)
 			ss.Start()
+
+			tcp_session_mgr.GetSessionMgr().AllAdd(ss)
 		}
 
 		//log.Debug("server end", zap.String("addr", s.options.listenAddr))

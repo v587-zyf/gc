@@ -65,3 +65,6 @@ func (code ErrCode) Int() int {
 func (code ErrCode) Int32() int32 {
 	return int32(code)
 }
+func (code ErrCode) UInt32() uint32 {
+	return uint32(code)
+}
