@@ -89,6 +89,8 @@ func NewResponseHandlerFn(fn ResponseHandlerFn) fiber.Handler {
 		if err != nil {
 			var errCode errcode.ErrCode
 			if errors.As(err, &errCode) && !errors.Is(errCode, errcode.ERR_SUCCEED) {
+				return SendErrCode(c, errCode)
+			} else {
 				return SendError(c, err)
 			}
 		}
