@@ -14,9 +14,10 @@ var (
 	ERR_NET_SEND_TIMEOUT   = CreateErrCode(11, NewCodeLang("发送数据超时", enums.LANG_CN), NewCodeLang("The sending data timed out", enums.LANG_EN))
 	ERR_NET_PKG_LEN_LIMIT  = CreateErrCode(12, NewCodeLang("数据包长度限制", enums.LANG_CN), NewCodeLang("Packet length limit", enums.LANG_EN))
 	ERR_SERVER_INTERNAL    = CreateErrCode(13, NewCodeLang("服务器内部错误", enums.LANG_CN), NewCodeLang("Server internal error", enums.LANG_EN))
-	ERR_WP_TOO_MANY_WORKER = CreateErrCode(14, NewCodeLang("工作池任务太多", enums.LANG_CN), NewCodeLang("There are too many work pool tasks", enums.LANG_EN))
-	ERR_JSON_MARSHAL_ERR   = CreateErrCode(15, NewCodeLang("json打包错误", enums.LANG_CN), NewCodeLang("JSON packaging error", enums.LANG_EN))
-	ERR_JSON_UNMARSHAL_ERR = CreateErrCode(16, NewCodeLang("json解包错误", enums.LANG_CN), NewCodeLang("JSON unpacking error", enums.LANG_EN))
+	ERR_WP_STOPPED         = CreateErrCode(14, NewCodeLang("工作池已停止", enums.LANG_CN), NewCodeLang("work pool stopped", enums.LANG_EN))
+	ERR_WP_TOO_MANY_WORKER = CreateErrCode(15, NewCodeLang("工作池任务太多", enums.LANG_CN), NewCodeLang("There are too many work pool tasks", enums.LANG_EN))
+	ERR_JSON_MARSHAL_ERR   = CreateErrCode(16, NewCodeLang("json打包错误", enums.LANG_CN), NewCodeLang("JSON packaging error", enums.LANG_EN))
+	ERR_JSON_UNMARSHAL_ERR = CreateErrCode(17, NewCodeLang("json解包错误", enums.LANG_CN), NewCodeLang("JSON unpacking error", enums.LANG_EN))
 
 	ERR_EVENT_PARAM_INVALID     = CreateErrCode(31, NewCodeLang("事件参数错误", enums.LANG_CN), NewCodeLang("Event parameter error", enums.LANG_EN))
 	ERR_EVENT_LISTENER_LIMIT    = CreateErrCode(32, NewCodeLang("事件监听器数量限制", enums.LANG_CN), NewCodeLang("Event listener limit", enums.LANG_EN))
