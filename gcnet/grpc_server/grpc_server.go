@@ -5,7 +5,9 @@ import (
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"net"
+	"time"
 )
 
 type GrpcServer struct {
@@ -39,7 +41,18 @@ func (s *GrpcServer) Init(ctx context.Context, option ...any) (err error) {
 		return
 	}
 
-	s.server = grpc.NewServer()
+	keepalivePolicy := keepalive.EnforcementPolicy{
+		MinTime:             30 * time.Second,
+		PermitWithoutStream: true,
+	}
+	keepaliveOptions := keepalive.ServerParameters{
+		Time:    30 * time.Second,
+		Timeout: 20 * time.Second,
+	}
+	s.server = grpc.NewServer(
+		grpc.KeepaliveEnforcementPolicy(keepalivePolicy),
+		grpc.KeepaliveParams(keepaliveOptions),
+	)
 
 	return nil
 }

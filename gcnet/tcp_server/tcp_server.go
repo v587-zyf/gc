@@ -6,6 +6,7 @@ import (
 	"github.com/v587-zyf/gc/gcnet/tcp_session_mgr"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
+	"kernel/tools"
 	"net"
 	"sync"
 )
@@ -47,10 +48,9 @@ func (s *TcpServer) Init(ctx context.Context, option ...Option) (err error) {
 
 func (s *TcpServer) Start() {
 	s.wg.Add(1)
-	go func(svr *TcpServer) {
-		defer func() {
-			svr.wg.Done()
-		}()
+
+	go tools.GoSafe("tcp_server start listen", func() {
+		defer s.wg.Done()
 
 	LOOP:
 		for {
@@ -65,9 +65,7 @@ func (s *TcpServer) Start() {
 
 			tcp_session_mgr.GetSessionMgr().AllAdd(ss)
 		}
-
-		//log.Debug("server end", zap.String("addr", s.options.listenAddr))
-	}(s)
+	})
 
 	s.Wait()
 }

@@ -4,13 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/gofiber/fiber/v2"
-	"github.com/v587-zyf/gc/log"
-	"sync"
-
+	"kernel/tools"
 	"net"
+	"sync"
+	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
+
+	"github.com/v587-zyf/gc/log"
 )
 
 type HttpServer struct {
@@ -28,9 +30,11 @@ type HttpServer struct {
 
 func NewHttpServer() *HttpServer {
 	app := fiber.New(fiber.Config{
-		JSONEncoder: json.Marshal,
-		JSONDecoder: json.Unmarshal,
-
+		JSONEncoder:  json.Marshal,
+		JSONDecoder:  json.Unmarshal,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  90 * time.Second,
 		//DisableKeepalive:      true,
 		DisableStartupMessage: true,
 		//Prefork:               true,
@@ -40,7 +44,7 @@ func NewHttpServer() *HttpServer {
 			return nil
 		},
 	})
-	app.Server().KeepHijackedConns = true
+	// app.Server().KeepHijackedConns = true
 
 	s := &HttpServer{
 		options: NewHttpOption(),
@@ -117,16 +121,16 @@ func (s *HttpServer) GetApp() *fiber.App {
 func (s *HttpServer) Start() {
 	s.wg.Add(1)
 
-	go func() {
+	go tools.GoSafe("http_server start listener", func() {
 		err := s.app.Listener(s.ln)
 		if err != nil {
-			log.Info("httpserver stopped", zap.Error(err))
+			log.Error("httpserver stopped", zap.Error(err))
 		} else {
 			log.Info("httpserver stopped")
 		}
 
 		s.wg.Done()
-	}()
+	})
 
 	return
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
+	"kernel/tools"
 	"math"
 	"sync"
 	"time"
@@ -52,8 +53,13 @@ func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 func (s *Session) Start() {
 	s.hooks.ExecuteStart(s)
 
-	go s.readPump()
-	go s.IOPump()
+	go tools.GoSafe("ws_session read pump", func() {
+		s.readPump()
+	})
+
+	go tools.GoSafe("ws_session io pump", func() {
+		s.IOPump()
+	})
 }
 
 func (s *Session) Hooks() *Hooks {

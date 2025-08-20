@@ -11,10 +11,10 @@ const (
 	MAX_LISTENER_CNT = 100
 )
 
-func NewEventEmitter() *EventEmitter {
+func NewEventEmitter(maxListeners int) *EventEmitter {
 	return &EventEmitter{
 		events: make(map[string][]ListenerFn),
-		max:    1000,
+		max:    maxListeners,
 	}
 }
 

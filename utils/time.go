@@ -62,6 +62,12 @@ func IsYesterday(t time.Time) bool {
 		t.Day() == yesterday.Day()
 }
 
+func IsPreviousDay(t time.Time) bool {
+	yesterday := time.Now().Add(-24 * time.Hour)
+	return t.Year() < yesterday.Year() ||
+		(t.Year() == yesterday.Year() && t.YearDay() <= yesterday.YearDay())
+}
+
 // 用字符串格式化时间
 func GetTimeByData(dateStr string) (time.Time, error) {
 	loc, _ := time.LoadLocation("Local")

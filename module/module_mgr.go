@@ -6,6 +6,7 @@ import (
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
+	"kernel/tools"
 	"sync"
 )
 
@@ -60,15 +61,17 @@ func (mm *ModuleMgr) Init(ctx context.Context, opts ...iface.Option) (err error)
 	wg.Add(moduleLen)
 
 	mm.modules.Range(func(key, value any) bool {
-		go func(module iface.IModule) {
+		go tools.GoSafe("module init", func() {
 			defer wg.Done()
-			err := module.Init(ctx, opts...)
+			m := value.(iface.IModule)
+			err := m.Init(ctx, opts...)
 			if err != nil {
-				log.Error("module init failed", zap.String("name", module.Name()), zap.Error(err))
+				log.Error("module init failed", zap.String("name", m.Name()), zap.Error(err))
 			}
-		}(value.(iface.IModule))
+		})
 		return true
 	})
+
 	wg.Wait()
 
 	return nil
@@ -84,13 +87,15 @@ func (mm *ModuleMgr) Start() (err error) {
 	wg.Add(moduleLen)
 
 	mm.modules.Range(func(key, value any) bool {
-		go func(module iface.IModule) {
+		go tools.GoSafe("module init", func() {
 			defer wg.Done()
-			err := module.Start()
+			m := value.(iface.IModule)
+			err := m.Start()
 			if err != nil {
-				log.Error("module start failed", zap.String("name", module.Name()), zap.Error(err))
+				log.Error("module init failed", zap.String("name", m.Name()), zap.Error(err))
 			}
-		}(value.(iface.IModule))
+		})
+
 		return true
 	})
 
@@ -109,10 +114,12 @@ func (mm *ModuleMgr) Run() {
 	wg.Add(moduleLen)
 
 	mm.modules.Range(func(key, value any) bool {
-		go func(module iface.IModule) {
+		go tools.GoSafe("module init", func() {
 			defer wg.Done()
-			module.Run()
-		}(value.(iface.IModule))
+			m := value.(iface.IModule)
+			m.Run()
+		})
+
 		return true
 	})
 
@@ -129,10 +136,12 @@ func (mm *ModuleMgr) Stop() {
 	wg.Add(moduleLen)
 
 	mm.modules.Range(func(key, value any) bool {
-		go func(module iface.IModule) {
+		go tools.GoSafe("module init", func() {
 			defer wg.Done()
-			module.Stop()
-		}(value.(iface.IModule))
+			m := value.(iface.IModule)
+			m.Stop()
+		})
+
 		return true
 	})
 

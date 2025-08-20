@@ -2,9 +2,11 @@ package worker_pool
 
 import (
 	"context"
+	"errors"
 	"github.com/v587-zyf/gc/errcode"
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
+	"kernel/tools"
 	"runtime"
 	"sync"
 	"time"
@@ -21,6 +23,7 @@ type WorkerPool struct {
 	minWorkerCnt int
 	curWorkerCnt int
 
+	once     sync.Once
 	mu       sync.Mutex
 	pool     sync.Pool
 	stopCh   chan struct{}
@@ -79,50 +82,55 @@ var workerCap = func() int {
 }()
 
 func (p *WorkerPool) Start() {
-	if p.stopCh != nil {
-		return
-	}
+	p.once.Do(func() {
+		p.stopCh = make(chan struct{})
+		p.mustStop = false
 
-	p.stopCh = make(chan struct{})
-	stopCh := p.stopCh
+		go tools.GoSafe("work_pool loop", func() {
+			timer := time.NewTicker(10 * time.Second)
+			defer timer.Stop()
 
-	p.mustStop = false
-
-	go func() {
-		timer := time.NewTicker(10 * time.Second)
-		var scratch []*worker
-	LOOP:
-		for {
-			select {
-			case <-stopCh:
-				break LOOP
-			case <-timer.C:
-				p.clean(&scratch)
+			var scratch []*worker
+		LOOP:
+			for {
+				select {
+				case <-p.stopCh:
+					break LOOP
+				case <-timer.C:
+					p.clean(&scratch)
+				}
 			}
-		}
 
-		timer.Stop()
-		timer = nil
-	}()
+			for len(timer.C) > 0 {
+				<-timer.C
+			}
+		})
+	})
 }
 
 func (p *WorkerPool) Stop() {
+	if p.cancel != nil {
+		p.cancel()
+	}
+
+	p.mu.Lock()
 	if p.stopCh == nil {
+		p.mu.Unlock()
 		return
 	}
 	close(p.stopCh)
 	p.stopCh = nil
-
-	p.mu.Lock()
-	ready := p.ready
-	for i := range ready {
-		ready[i].task <- nil
-		// close(ready[i].task)
-		ready[i] = nil
-	}
-	p.ready = ready[:0]
 	p.mustStop = true
+	ready := p.ready
+	p.ready = nil
 	p.mu.Unlock()
+
+	for _, w := range ready {
+		select {
+		case w.task <- nil:
+		default:
+		}
+	}
 }
 
 func (p *WorkerPool) GetCtx() context.Context {
@@ -130,13 +138,27 @@ func (p *WorkerPool) GetCtx() context.Context {
 }
 
 func (p *WorkerPool) Assign(task iface.ITask) error {
+	select {
+	case <-p.ctx.Done():
+		log.Warn("WorkPool Assign failed due to context done", zap.Any("task", task))
+		return errors.New("work_pool stopped")
+	default:
+	}
+
 	w := p.getWorker()
 	if w == nil {
-		log.Error("WorkPool Assign Failed", zap.Int("maxWorkerCnt", p.maxWorkerCnt), zap.Any("task", task))
+		log.Error("WorkPool Assign Failed", zap.Int("maxWorkerCnt", p.maxWorkerCnt),
+			zap.Int("curWorkerCnt", p.curWorkerCnt), zap.Any("task", task))
 		return errcode.ERR_WP_TOO_MANY_WORKER
 	}
-	w.task <- task
-	return nil
+
+	select {
+	case w.task <- task:
+		return nil
+	case <-p.ctx.Done():
+		log.Warn("WorkPool Assign failed during send", zap.Any("task", task))
+		return errors.New("work_pool stopped")
+	}
 }
 
 func (p *WorkerPool) clean(scratch *[]*worker) {
@@ -187,40 +209,39 @@ func (p *WorkerPool) clean(scratch *[]*worker) {
 }
 
 func (p *WorkerPool) getWorker() *worker {
-	var w *worker
-	canCreate := false
-
 	p.mu.Lock()
-	ready := p.ready
-	n := len(ready) - 1
-	if n < 0 {
-		if p.curWorkerCnt < p.maxWorkerCnt {
-			canCreate = true
-			p.curWorkerCnt++
-		}
-	} else {
-		w = ready[n]
-		ready[n] = nil
-		p.ready = ready[:n]
+	defer p.mu.Unlock()
+
+	if n := len(p.ready) - 1; n >= 0 {
+		w := p.ready[n]
+		p.ready[n] = nil
+		p.ready = p.ready[:n]
+		return w
 	}
-	p.mu.Unlock()
 
-	if w == nil {
-		if !canCreate {
-			return nil
-		}
-		v := p.pool.Get()
-		w = v.(*worker)
-		go func() {
-			w.run(p)
+	if p.curWorkerCnt >= p.maxWorkerCnt {
+		return nil
+	}
 
+	p.curWorkerCnt++
+	v := p.pool.Get()
+	w, ok := v.(*worker)
+	if !ok {
+		p.curWorkerCnt--
+		log.Error("invalid worker type from pool")
+		return nil
+	}
+
+	go tools.GoSafe("work_pool get work", func() {
+		defer func() {
 			p.mu.Lock()
 			p.curWorkerCnt--
 			p.mu.Unlock()
-
 			p.pool.Put(v)
 		}()
-	}
+		w.run(p)
+	})
+
 	return w
 }
 

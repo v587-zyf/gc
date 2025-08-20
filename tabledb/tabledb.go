@@ -11,6 +11,7 @@ import (
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"io"
+	"kernel/tools"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -134,14 +135,14 @@ func (t *TableDb) loadExcel(baseDir string) (bool, error) {
 		num++
 
 		wg.Add(1)
-		go func(v FileInfo, fName string) {
+		go tools.GoSafe("tabledb load file", func() {
 			if err = t.loadFile(fName, v.SheetInfos); err != nil {
 				log.Error("load err", zap.String("fileName", v.FileName), zap.Error(err))
 				loadErr = err
 			}
 			//fmt.Printf("加载完成: %v\n", fileInfos[index].FileName)
 			wg.Done()
-		}(v, fName)
+		})
 	}
 
 	wg.Wait()

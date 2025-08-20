@@ -2,6 +2,7 @@ package buffer_pool
 
 import (
 	"context"
+	"kernel/tools"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -56,7 +57,9 @@ func (bp *BufferPool) Init(ctx context.Context, opts ...any) error {
 
 	if bp.options.autoCleanup {
 		bp.ticker = time.NewTicker(bp.options.cleanupPeriod)
-		go bp.cleanupLoop()
+		go tools.GoSafe("buffer pool clean loop", func() {
+			bp.cleanupLoop()
+		})
 	}
 
 	return nil

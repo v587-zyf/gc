@@ -14,6 +14,7 @@ import (
 	"github.com/v587-zyf/gc/utils"
 	"go.uber.org/zap"
 	"io"
+	"kernel/tools"
 	"net/http"
 )
 
@@ -53,7 +54,9 @@ func (s *WsServer) Init(ctx context.Context, option ...Option) (err error) {
 }
 
 func (s *WsServer) Start() {
-	go ws_session_mgr.GetSessionMgr().Start()
+	go tools.GoSafe("ws_server start loop", func() {
+		ws_session_mgr.GetSessionMgr().Start()
+	})
 
 	var err error
 

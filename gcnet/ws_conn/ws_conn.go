@@ -10,6 +10,7 @@ import (
 	"github.com/v587-zyf/gc/iface"
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
+	"kernel/tools"
 	"math"
 	"sync"
 	"time"
@@ -53,8 +54,12 @@ func NewConn(ctx context.Context, conn iface.IConn) *Conn {
 func (s *Conn) Start() {
 	s.hooks.ExecuteStart(s)
 
-	go s.readPump()
-	go s.IOPump()
+	go tools.GoSafe("ws_conn read pump", func() {
+		s.readPump()
+	})
+	go tools.GoSafe("ws_conn io pump", func() {
+		s.IOPump()
+	})
 }
 
 func (s *Conn) Hooks() *Hooks {

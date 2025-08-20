@@ -6,7 +6,7 @@ import (
 
 const (
 	DefaultMaxSize    = 300 * 1024 * 1024
-	DefaultMaxAge     = 30
+	DefaultMaxAge     = 90
 	DefaultMaxBackups = 999
 
 	DefaultInfoFileName  = "%s/info-%d-%d-%d.log"

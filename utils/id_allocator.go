@@ -14,7 +14,7 @@ type Uint32IdAllocator struct {
 }
 
 func NewUint32IdAllocator(seq int) *Uint32IdAllocator {
-	initId := uint32(seq) << 28
+	initId := uint32(seq) << 10
 	return &Uint32IdAllocator{id: initId, initId: initId, maxId: initId | 0xfffffff}
 }
 

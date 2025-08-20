@@ -102,6 +102,7 @@ func (e *EventEmitter) Emit(eventName string, params ...interface{}) error {
 	e.mu.RLock()
 	v, ok := e.events[eventName]
 	if !ok {
+		e.mu.RUnlock()
 		return errcode.ERR_EVENT_LISTENER_EMPTY
 	}
 	listeners := make([]ListenerFn, len(v))

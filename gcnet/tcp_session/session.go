@@ -10,6 +10,7 @@ import (
 	"github.com/v587-zyf/gc/log"
 	"go.uber.org/zap"
 	"io"
+	"kernel/tools"
 	"math"
 	"net"
 	"runtime"
@@ -53,8 +54,13 @@ func NewSession(ctx context.Context, conn net.Conn) *Session {
 func (s *Session) Start() {
 	s.hooks.ExecuteStart(s)
 
-	go s.readPump()
-	go s.IOPump()
+	go tools.GoSafe("tcp_session read pump", func() {
+		s.readPump()
+	})
+
+	go tools.GoSafe("tcp_session io pump", func() {
+		s.IOPump()
+	})
 }
 
 func (s *Session) Hooks() *Hooks {

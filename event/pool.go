@@ -12,7 +12,7 @@ func (p *Pool) Get(userID int32) (*EventEmitter, bool) {
 		return v.(*EventEmitter), false
 	}
 
-	v, loaded := p.LoadOrStore(userID, NewEventEmitter())
+	v, loaded := p.LoadOrStore(userID, NewEventEmitter(MAX_LISTENER_CNT))
 
 	return v.(*EventEmitter), !loaded
 }

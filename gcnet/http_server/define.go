@@ -7,9 +7,10 @@ type Ctx struct {
 }
 
 type Response struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data,omitempty"`
+	Code    int         `json:"code"`
+	Msg     string      `json:"msg"`
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data,omitempty"`
 }
 type ResponseHandlerFn func(*Ctx) (any, error)
 

@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/v587-zyf/gc/enums"
 	"io"
 	"math"
 	"regexp"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"time"
 	"unsafe"
+
+	"github.com/v587-zyf/gc/enums"
 )
 
 // MD5 md5加密
@@ -67,6 +68,24 @@ func StringToInt32Array(src, flag string) (out []int32) {
 		}
 
 		out = append(out, int32(data))
+	}
+
+	return
+}
+
+func StringToUint32Array(src, flag string) (out []uint32) {
+	if src == "" {
+		return nil
+	}
+
+	strs := strings.Split(src, flag)
+	for _, v := range strs {
+		data, err := strconv.Atoi(v)
+		if err != nil {
+			return nil
+		}
+
+		out = append(out, uint32(data))
 	}
 
 	return

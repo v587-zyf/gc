@@ -7,6 +7,8 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
+	"time"
 )
 
 type GrpcClient struct {
@@ -33,11 +35,18 @@ func (s *GrpcClient) Init(ctx context.Context, option ...any) (err error) {
 		opt.(Option)(s.options)
 	}
 
-	credentials := grpc.WithTransportCredentials(insecure.NewCredentials())
 	linkAddr := fmt.Sprintf("passthrough:%s", s.options.listenAddr)
-	//linkAddr := fmt.Sprintf("%s", s.options.listenAddr)
-	s.client, err = grpc.NewClient(linkAddr, credentials)
-	//s.client, err = grpc.NewClient(linkAddr)
+	keepAliveParams := keepalive.ClientParameters{
+		Time:                30 * time.Second,
+		Timeout:             20 * time.Second,
+		PermitWithoutStream: true,
+	}
+	opts := []grpc.DialOption{
+		grpc.WithKeepaliveParams(keepAliveParams),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	s.client, err = grpc.NewClient(linkAddr, opts...)
 	if err != nil {
 		log.Error("grpc dial err", zap.Error(err))
 		return

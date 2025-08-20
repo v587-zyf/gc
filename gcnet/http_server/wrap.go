@@ -3,11 +3,13 @@ package http_server
 import (
 	"encoding/json"
 	"errors"
+	"runtime"
+
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
+
 	"github.com/v587-zyf/gc/errcode"
 	"github.com/v587-zyf/gc/log"
-	"go.uber.org/zap"
-	"runtime"
 )
 
 func SendErrCode(c *fiber.Ctx, errCode errcode.ErrCode) error {
@@ -47,9 +49,10 @@ func SendError(c *fiber.Ctx, err error) error {
 
 func SendResponse(c *fiber.Ctx, data any) error {
 	resp := Response{
-		Code: errcode.ERR_SUCCEED.Int(),
-		Msg:  "ok",
-		Data: data,
+		Code:    errcode.ERR_SUCCEED.Int(),
+		Msg:     "ok",
+		Success: true,
+		Data:    data,
 	}
 
 	out, err := json.Marshal(resp)

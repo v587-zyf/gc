@@ -3,6 +3,7 @@ package worker_queue
 import (
 	"context"
 	"github.com/v587-zyf/gc/internal"
+	"kernel/tools"
 	"sync"
 )
 
@@ -83,7 +84,9 @@ func (c *WorkerQueue) do(job asyncJob) {
 // Adds a job to the queue and executes it immediately if resources are available
 func (c *WorkerQueue) Push(job asyncJob) {
 	if nextJob := c.getJob(job, 0); nextJob != nil {
-		go c.do(nextJob)
+		go tools.GoSafe("work_queue do", func() {
+			c.do(nextJob)
+		})
 	}
 }
 
