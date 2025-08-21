@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-option go_package = "../../out/client;pb";
-
-package client.c_msgId;
-
-enum C_MSG {
-  ID_MyMessage = 0;
-}
